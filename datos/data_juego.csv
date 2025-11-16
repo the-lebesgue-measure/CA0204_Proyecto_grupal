@@ -1,0 +1,11 @@
+Modo,Modelo,Modelo_contrario,Finalizado,Jaque,Mate,Ahogado,Material,Regla75,Repeticion5,Numero_de_movimientos
+bot_vs_bot_interno,Hatchet1,Hatchet1,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,219
+bot_vs_bot_interno,Hatchet1,Hatchet1,TRUE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,194
+bot_vs_bot_interno,Hatchet1,Hatchet1,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,225
+bot_vs_bot_interno,Hatchet1,Hatchet1,TRUE,TRUE,TRUE,FALSE,FALSE,FALSE,FALSE,163
+bot_vs_bot_interno,Hatchet1,Hatchet1,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,240
+bot_vs_bot_interno,Hatchet1,Hatchet1,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,219
+bot_vs_bot_interno,Hatchet1,Hatchet1,TRUE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,194
+bot_vs_bot_interno,Hatchet1,Hatchet1,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,225
+bot_vs_bot_interno,Hatchet1,Hatchet1,TRUE,TRUE,TRUE,FALSE,FALSE,FALSE,FALSE,163
+bot_vs_bot_interno,Hatchet1,Hatchet1,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,240

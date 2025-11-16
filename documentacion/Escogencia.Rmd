@@ -1,0 +1,56 @@
+---
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+\begin{center}
+\Huge UCR
+
+\vspace{2cm}
+
+\Large Escuela de Matemática
+
+\vspace{2cm}
+
+\Large Herramientas de Ciencias de Datos I (CA-0204)
+
+\vspace{2cm}
+
+\Huge Escogencia de tema para el proyecto grupal
+
+\vspace{2cm}
+
+\Large Profesor: Luis Juárez Potoy
+
+\vspace{2cm}
+
+\Large Estudiantes: \\
+Andres Zuñiga Mora (C38733) \\
+Anthonny Flores Rojas (C32975) \\
+Amy Chen Wu (C32203) \\
+Leonardo Vega Aragon (C38313)
+
+\vspace{2cm}
+
+\Large Fecha: `r Sys.Date()`
+\end{center}
+
+\newpage
+
+# Temas planteados inicialmente
+
+- Simulación de interacción entre partículas subatómicas
+- Criptografía con redes neuronales para seguridad de datos
+- Modelado de probabilidades y estrategias en Póker mediante cadenas de Markov
+- Modelado de epidemias con movimiento Browniano
+- Desarrollo de un bot de ajedrez utilizando algoritmos de autoaprendizaje con jugadas aleatorias
+
+De los temas propuestos, se valoró tanto la dificultad técnica como la aplicabilidad dentro del entorno de R, además de su conexión con problemas reales. La simulación de interacción entre partículas subatómicas generó interés por su trasfondo físico, pero fue descartada rápidamente: exige un manejo avanzado de mecánica cuántica (el cual ninguno de los companeros posee), interacción de fuerzas fundamentales y modelos de física computacional que sobrepasan el alcance del proyecto. Su nivel de formalismo matemático y de teoría de campos demanda un tiempo que no es factible. En el caso de la criptografía con redes neuronales, se enfrentó el mismo obstáculo: la complejidad de integrar aprendizaje profundo con protocolos de seguridad de datos exige un dominio sólido de machine learning aplicado a criptografía moderna, lo cual rebasa el margen de trabajo. El tema de modelado de epidemias con movimiento Browniano también se dejó de lado, ya que aunque su atractivo matemático y probabilístico es innegable pero, no se encontró una forma clara de vincularlo con aplicaciones prácticas inmediatas que justificaran el esfuerzo de simularlo en R en el contexto del curso. Por otro lado, el modelado de probabilidades y estrategias en Póker mediante cadenas de Markov fue evaluado como viable, pero perdió peso frente a otras opciones por no aportar tanto en términos de conexión con algoritmos de autoaprendizaje contemporáneos (redes neuronales). Finalmente, el desarrollo de un bot de ajedrez con algoritmos de autoaprendizaje y jugadas aleatorias destacó como la opción más completa: accesible, con suficiente rigor matemático y alineada con campos como teoría de juegos, probabilidad y aplicaciones en inteligencia artificial, convirtiéndose en la elección final.
+
+# Tema escogido
+
+El tema escogido fue Desarrollo de un bot de ajedrez utilizando algoritmos de autoaprendizaje con jugadas aleatorias. La motivación central de esta selección radica en que el ajedrez, por ser un juego de estrategia universalmente estudiado, resulta idóneo para probar y aplicar metodologías de autoaprendizaje como Q-learning o redes neuronales. La lógica del bot consiste en iniciar con jugadas aleatorias y, a partir de la retroalimentación de recompensas y penalizaciones, ajustar progresivamente sus decisiones hasta alcanzar patrones estratégicos más eficientes.
+
+Este enfoque conecta de manera directa con escenarios del mundo real, dado que el ajedrez encapsula conceptos de estadística, probabilidad, teoría de juegos y toma de decisiones bajo incertidumbre. En ese sentido, la implementación en R no solo permite modelar dinámicas complejas del juego, sino también extrapolar los resultados a contextos de optimización y aprendizaje automatizado presentes en inteligencia artificial y ciencia de datos aplicada.
+
+La elección final se fundamenta en su balance entre factibilidad técnica y profundidad matemática. Este tema no solo abre la posibilidad de evaluar probabilidades de éxito en distintas jugadas, sino que también permite diseñar y refinar estrategias que maximicen el rendimiento del bot a partir de una base inicial aleatoria. Con ello, se obtiene un proyecto que combina un ejercicio mas practico con un aporte conceptual en las matematicas y algoritmos de autoaprendisaje.

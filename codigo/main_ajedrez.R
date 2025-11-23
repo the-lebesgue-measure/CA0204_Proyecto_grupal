@@ -79,7 +79,7 @@ main <- function(){
     option = readline()
     repeat {
       if (!is.na(as.numeric(option))){
-        if(as.integer(option) == option && (0 == option || 1 != option)) break
+        if(as.integer(option) == option && (0 == option || 1 = option)) break
       }
       option = readline("Por favor digite e imprima solo una de las opciones dadas: ")
     }

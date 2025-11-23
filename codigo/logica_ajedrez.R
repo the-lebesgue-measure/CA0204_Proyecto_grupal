@@ -191,7 +191,7 @@ calculate.ucb <- function(node.stats, P.vector, C.puct = C.PUCT) {
 
 # Funcion para el resultado final de la partida
 get.game.result.value <- function(game) {
-  if (is.game.over(game)) { # Si finalizo la partida
+  if (is_game_over(game)) { # Si finalizo la partida
     result <- result(game) # Obtener resultado
     if (result == "1-0") return(1) # Blanco gana
     if (result == "0-1") return(-1) # Negro gana
@@ -269,7 +269,7 @@ best.move <- function(game, model, history.positions = NULL, move.count = 0) {
 }
 
 
-bot.vs.bot.game <- function(model ,games.data, games.heavy.data) {
+bot.vs.bot <- function(model ,games.data, games.heavy.data) {
   
   history.positions <- character()
   max.jugadas <- 240
@@ -279,7 +279,7 @@ bot.vs.bot.game <- function(model ,games.data, games.heavy.data) {
   move.times <- numeric()
   MCTS.policies <- list()
   
-  while (!is.game.over(game) && num.moves < max.jugadas) {
+  while (!is_game_over(game) && num.moves < max.jugadas) {
     
     current.fen <- fen(game)
     history.positions <- c(history.positions, current.fen)
@@ -342,3 +342,5 @@ bot.vs.bot.game <- function(model ,games.data, games.heavy.data) {
     games.heavy.data = games.heavy.data
   ))
 }
+
+

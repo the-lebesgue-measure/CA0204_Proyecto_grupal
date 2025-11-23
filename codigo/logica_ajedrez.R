@@ -61,10 +61,7 @@ mcts.tree <- new.env() # Entorno para el arbol
 C.PUCT <- 2.0 #* Coeficiente de exploracion MCTS
 NUM.SIMULATIONS <- 3200 #*
 
-# ============================================================
-##### [NUEVO] Sistema de nodos para el arbol MCTS
-# Obtiene un nodo o lo crea si no existe
-##### 
+
 
 get.node <- function(fen) {
   if (!exists(fen, envir = mcts.tree)) {
@@ -78,15 +75,6 @@ get.node <- function(fen) {
   get(fen, envir = mcts.tree)
 }
 
-##### [FIN NUEVO]
-# ============================================================
-
-
-
-# ============================================================
-##### [NUEVO] Expansion del nodo usando el modelo keras3
-# Evalua politica y valor y crea estadisticas iniciales
-#####
 
 expand.node <- function(fen, game, model) {
   
@@ -112,14 +100,6 @@ expand.node <- function(fen, game, model) {
   return(list(node=node, value=value))
 }
 
-##### [FIN NUEVO]
-# ============================================================
-
-
-
-# ============================================================
-##### [NUEVO] Seleccion usando UCB real
-#####
 
 choose.move.ucb <- function(node) {
   Q <- ifelse(node$N > 0, node$W / node$N, 0)
@@ -128,14 +108,8 @@ choose.move.ucb <- function(node) {
   names(which.max(UCB))
 }
 
-##### [FIN NUEVO]
-# ============================================================
 
 
-
-# ============================================================
-##### [NUEVO] Retropropagación del valor por el arbol
-#####
 
 backup <- function(path, value) {
   v <- value
@@ -152,14 +126,7 @@ backup <- function(path, value) {
   }
 }
 
-##### [FIN NUEVO]
-# ============================================================
 
-
-
-# ============================================================
-##### [NUEVO] Implementacion completa del MCTS estilo AlphaZero
-#####
 
 run.mcts <- function(game, model, num.simulations = NUM.SIMULATIONS, apply.noise = FALSE) {
   
@@ -209,9 +176,6 @@ run.mcts <- function(game, model, num.simulations = NUM.SIMULATIONS, apply.noise
     value = sum(root$W) / sum(root$N)
   ))
 }
-
-##### [FIN NUEVO]
-# ============================================================
 
 
 
@@ -304,10 +268,6 @@ best.move <- function(game, model, history.positions = NULL, move.count = 0) {
   return(best.move)
 }
 
-# ============================================================
-# Juego automatico bot vs bot
-# (Contiene lógica antigua pero usa el MCTS nuevo)
-# ============================================================
 
 bot.vs.bot.game <- function(model ,games.data, games.heavy.data) {
   

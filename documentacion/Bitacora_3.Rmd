@@ -6,6 +6,8 @@ geometry: margin=2.54cm
 mainfont: "Latin Modern Roman"
 fontsize: 12pt
 header-includes:
+  - \usepackage{polyglossia} 
+  - \setdefaultlanguage{spanish}
   - \usepackage{mathtools, amsmath, amssymb, amsfonts}
   - \usepackage{physics}  % Para derivadas, vectores, etc.
   - \usepackage{siunitx}  
@@ -51,7 +53,7 @@ header-includes:
 
 \vspace{1cm}
 
-\Large Bitacora 2
+\Large Bitacora 3
 
 \vspace{1cm}
 
@@ -82,25 +84,207 @@ Leonardo Vega Aragon (C38313)
 \newpage
 \setcounter{page}{1}
 
-1 - Escoja técnicas o métodos estadísticos que le permitan responder su pregunta de investigación.
+\section{1. Escoja técnicas o métodos estadísticos que le permitan responder su pregunta de investigación.}
+
+\textbf{Nuestra Pregunta de Investigación es:} ¿Qué tan factible es hacer un bot de ajedrez en un lenguaje como R?
+
+\textbf{Técnicas o Métodos Estadísticos Escogidos:}
+\begin{itemize}
+ \item \textbf{Porcentaje de victorias (Win Rate):} Permite medir el desempeño general del bot en función del número de partidas ganadas respecto al total.
+ \item \textbf{Promedio de tiempo por movimiento:} Evalúa la velocidad de respuesta del bot, lo cual es relevante para determinar si el funcionamiento es eficiente en tiempo real.
+ \item \textbf{Promedio de jugadas por partida:} Permite identificar la duración de las partidas y si el bot logra sostener juegos completos y válidos.
+ \item \textbf{Análisis de tendencia del aprendizaje:} Se calcula el cambio del porcentaje de victorias a lo largo de múltiples partidas para determinar si el rendimiento mejora con la experiencia.
+\end{itemize}
+
+Estas técnicas permiten analizar objetivamente si un bot de ajedrez implementado en R es capaz de competir de forma estable y eficiente frente a un motor profesional como Stockfish, lo cual responde directamente a la pregunta de investigación.
+
+\section{2. Escriba un marco metodológico donde se coloque la fundamentaciónn estadístico-matemática del método o técnica escogida.} 
+
+\subsection{1. Modelado del Problema: Proceso de Decisión de Markov (MDP)}
+
+Para modelar las patidas de ajedrez de la manera más óptima posible, se decidió utilizar el \textbf{Proceso de Decisión de Markov} (MDP) [8]. Este proceso se desarrolla en un entorno de juego con información perfecta y cuenta con tres componentes:
+
+\begin{itemize}
+ \item \textbf{Estado ($\mathbf{s}$)}:El estado corresponde a una descripción completa y precisa de la posición actual del juego. Así, se modeló el tablero como un tensor de dimensiones 
+8$\times$8$\times$16. Esta representación codifica, para cada casilla, la presencia o ausencia de cada tipo de pieza (propia y del oponente), así como otros atributos relevantes del estado del juego [4].
+Esta estructura permite que el modelo procese la información del tablero de manera uniforme y facilita su uso como entrada para algoritmos de aprendizaje profundo. Un estado también puede incluir información adicional como el turno, el derecho de enroque o la posibilidad de captura al paso, pero para este proyecto se mantuvo una representación simplificada centrada en las piezas activas.
+ \item \textbf{Acción ($\mathbf{a}$)}: Una acción corresponde a cualquier movimiento legal que un jugador puede ejecutar desde la posición actual del tablero. Para esto, se usó la lista de movimientos permitidos en el juego del ajedrez.
+ \item \textbf{Recompensa ($\mathbf{R}$)}: La recompensa utilizada fue terminal y binaria, representada por
+\[
+z \in \{-1,\,0,\,1\}.
+\]
+Esto significa que el agente solo recibe una recompensa al finalizar la partida:
+\begin{itemize}
+ \item $z = 1$ si el bot gana,
+ \item $z = -1$ si pierde,
+ \item $z = 0$ si empata.
+\end{itemize}
+
+Este diseño simplificado evita sesgos durante el aprendizaje y obliga al modelo a identificar patrones que 
+conducen a posiciones ventajosas a largo plazo [8]. No se asignaron recompensas intermedias para evitar un aprendizaje 
+miope basado en valores heurísticos y, en su lugar, se buscó que el bot aprendiera estrategias coherentes 
+a lo largo del horizonte completo de la partida.
+ \item \textbf{Objetivo}: Encontrar la política óptima $\pi^*(a \mid s)$ y la función de valor óptimo $V^*(s)$.
+\end{itemize}
+
+El proyecto se fundamenta en el marco del \textbf{Aprendizaje por Refuerzo Profundo (Deep Reinforcement Learning - DRL)} [7], empleando una arquitectura tipo AlphaZero que combina una \textbf{Red Neuronal de Valor y Política} con el algoritmo de \textbf{Búsqueda en Árbol Monte Carlo (MCTS)} [8].
 
 
+\subsection{2. Red Neuronal Profunda: Aproximación de Funciones}
+La red neuronal $\mathbf{f}_{\theta}(s)$ aproxima el valor y la política utilizando dos cabezas de salida [5], [6].
 
-2- Escriba un marco metodológico donde se coloque la fundamentaciónn estadístico-matemática del método o técnica escogida. 
+\subsubsection{A. Cabeza de Valor (Value Head)}
+Aproxima la función de valor $V^*(s)$, es decir, la esperanza de la recompensa terminal. La activación final es $\text{tanh}(\cdot)$.
+
+\textbf{Aproximación:}
+$$ \hat{v}_{\theta}(s) \approx V^*(s) $$
+
+\textbf{Función de Pérdida (Error Cuadrático Medio - MSE):}
+$$ \mathcal{L}_{v}(\theta) = \frac{1}{N} \sum_{i=1}^{N} \left( z_i - \hat{v}_{\theta}(s_i) \right)^2 $$
+Donde $z_i$ es el resultado final real de la partida (recompensa).
+
+\subsubsection{B. Cabeza de Política (Policy Head)}
+Aproxima la distribución de probabilidad óptima $\pi^*(s)$ sobre las acciones. La activación final es $\text{softmax}(\cdot)$.
+
+\textbf{Aproximación:}
+$$ \hat{p}_{\theta}(a \mid s) \approx \pi^*(a \mid s) $$
+
+\textbf{Función de Pérdida (Entropía Cruzada Categórica - CCE):}
+Minimiza la divergencia entre la política predicha $\hat{p}_{\theta}$ y la política objetivo $\pi$ generada por MCTS [7], [8].
+$$ \mathcal{L}_{\pi}(\theta) = - \sum_{a \in \text{Acciones}} \pi(a \mid s) \cdot \log(\hat{p}_{\theta}(a \mid s)) $$
+
+\subsubsection{C. Pérdida Total}
+La función de pérdida total combina ambas cabezas con un término de regularización $L_2$ ($\lambda$ es el coeficiente de regularización) [8].
+$$ \mathcal{L}(\theta) = \mathcal{L}_{v}(\theta) + \mathcal{L}_{\pi}(\theta) + \lambda ||\theta||^2 $$
+El entrenamiento se realiza por \textbf{Descenso de Gradiente} (Optimizador Adam) para encontrar $\operatorname{argmin}_{\theta} \mathcal{L}(\theta)$.
+
+\subsection{3. Algoritmo de Búsqueda en Árbol Monte Carlo (MCTS)}
+El MCTS refina las predicciones de la red neuronal mediante simulación, generando una política de búsqueda $\pi$ superior a la política a priori $\hat{p}$ [8].
+
+\subsubsection{A. Criterio de Selección (PUCT)}
+El MCTS selecciona la acción $a$ que maximiza el valor $U(s, a)$, equilibrando la explotación de las acciones con alto $Q$ y la exploración de las acciones con alta probabilidad $\hat{p}$ o baja visita $N(s, a)$ [8].
+
+$$ U(s, a) = Q(s, a) + C_{\text{PUCT}} \cdot \hat{p}(a \mid s) \cdot \frac{\sqrt{N(s)}}{1 + N(s, a)} $$
+
+\subsubsection{B. Generación de la Política Objetivo}
+Tras las simulaciones, la política $\pi(a \mid s)$ usada como \textbf{etiqueta de entrenamiento} se define como la distribución de probabilidad basada en las frecuencias de visita $N(s, a)$.
+$$ \pi(a \mid s) = \frac{N(s, a)}{\sum_{b} N(s, b)} $$
+
+\subsubsection{C. Muestreo con Temperatura}
+La selección final del movimiento en el auto-juego se realiza aplicando una temperatura $\tau$ a la política de búsqueda, permitiendo la transición de \textbf{exploración} ($\tau=1.0$ al inicio) a \textbf{explotación} ($\tau=0.01$ al final) mediante:
+$$ \text{Prob}(a) = \frac{\pi(a \mid s)^{1/\tau}}{\sum_{b} \pi(b \mid s)^{1/\tau}} $$
+
+\section{3. Aplique dichas técnicas o métodos. Presente los resultados, analícelos y responda su pregunta de investigación.}
+
+\subsection{Pregunta de investigación}
+¿Es factible desarrollar un bot de ajedrez en un lenguaje como R?
+
+\subsection{Evidencia basada en los datos recolectados}
+A partir de los registros almacenados en \texttt{data\_fuerte.csv}, se observa lo siguiente:
+\begin{itemize}
+ \item Todas las partidas fueron ejecutadas en el modo \texttt{bot\_vs\_bot\_interno}, es decir, la IA desarrollada en R jugó contra sí misma.
+\item Todas las partidas finalizaron correctamente, sin errores del motor de ajedrez o fallos durante la ejecución.
+\item La variable \texttt{Resultado\_Num} registra únicamente valores iguales a 0, lo que indica que todas las partidas terminaron en \textbf{empate}.
+\item Las variables \texttt{Mate} y \texttt{Jaque} permanecen como \texttt{FALSE}, evidenciando que las partidas no concluyen mediante jaque mate, sino por mecanismos de \textbf{tablas} (por estancamiento, repetición o agotamiento de recursos para progresar).
+ \item El número de movimientos por partida se encuentra entre aproximadamente 50 y 90 jugadas, lo que evidencia que la IA es capaz de mantener partidas completas y estables.
+\item El tiempo promedio por movimiento se encuentra alrededor de \textbf{0.04 a 0.05 segundos}, lo cual se considera un rendimiento alto en términos de eficiencia de ejecución.
+\end{itemize}
+Además, durante las ejecuciones del modo IA vs Stockfish, se observó que la IA desarrollada en R:
+\begin{enumerate}
+ \item Es capaz de producir movimientos legales y sostener una partida completa.
+\item No presenta fallos informáticos ni errores del motor.
+\item No posee capacidades estratégicas profundas ni algoritmos de búsqueda avanzados.
+ \item Pierde consistentemente ante Stockfish debido a la ausencia de evaluación posicional y de planificación táctica.
+\end{enumerate}
+
+\subsection{Interpretación}
+Los resultados muestran que el bot implementado en R logra jugar de forma completa, estable y eficiente. Esto confirma que, desde un punto de vista computacional, es \textbf{posible desarrollar un bot de ajedrez funcional} dentro de este lenguaje. Sin embargo, el nivel de competitividad del bot es bajo. La IA no evalúa posiciones, no calcula variantes profundas ni implementa principios estratégicos de apertura, medio juego o finales. Como consecuencia, el bot comete pérdidas de material sin compensación y no puede identificar amenazas tácticas relevantes, lo cual explica que pierda de manera consistente ante Stockfish.
+
+\subsection{Respuesta a la pregunta de investigación}
+A partir de los resultados obtenidos, se concluye que \textbf{sí es factible desarrollar un bot de ajedrez en un lenguaje como R}, en el sentido de que el sistema puede generar movimientos legales, completar partidas completas sin fallos, comunicarse correctamente con un motor profesional como Stockfish y registrar información relevante para su análisis posterior.
+
+No obstante, los resultados también indican que \textbf{R no es un lenguaje adecuado para alcanzar un nivel competitivo alto} en el contexto de motores de ajedrez. Esto se debe a que R no está optimizado para cálculos intensivos en búsqueda de árboles de decisión, heurísticas posicionales, paralelización específica para análisis de ajedrez ni administración de memoria de bajo nivel, aspectos fundamentales en los motores modernos. Lenguajes como C++, Rust o incluso Python con bibliotecas especializadas ofrecen herramientas significativamente más eficientes para este tipo de aplicaciones [11].
+
+\subsection{Síntesis}
+El bot desarrollado demuestra que R es técnicamente capaz de:
+\begin{itemize}
+ \item procesar posiciones de ajedrez y generar jugadas válidas,
+ \item interactuar con un motor profesional en tiempo real,
+ \item mantener partidas completas sin errores,
+ \item y almacenar datos para investigación y análisis estadístico.
+\end{itemize}
+Sin embargo, \textbf{no es capaz de competir eficazmente contra motores avanzados debido a sus limitaciones de rendimiento y capacidad algorítmica en este contexto}. Por tanto, R resulta útil para fines educativos, experimentales y analíticos, pero no para el desarrollo de un motor de ajedrez de alto nivel.
+
+\section{6. Escriba tres conclusiones obtenidas de su trabajo dando respuesta su pregunta de investigación.}
+
+\section{Conclusiones}
+
+La primera conclusión a la que se llegó durante el desarrollo del presente proyecto fue que todavía hace falta una gran 
+cantidad de aprendizaje para lograr usar de manera correcta el concepto de redes neuronales. Una de las mayores dificultades
+se dio en que, cada vez que se quería hacer un avance había que estudiar una serie de conceptos, los cuales a su vez tenían raíces en otros temas 
+aparte. En síntesis, este tema es sumamente amplio, y en el transcurso de un semestre resulta sumamente difícil aprender a manejar la teoría detrás de las redes neuronales.
+
+Posteriormente, la segunda conclusión que se obtuvo es que el entrenamiento de un bot en el contexto del ajedrez es sumamente eficiente, pues con una cantidad relativamente baja de 
+entrenamientos el bot fue capaz de alcanzar el nivel de un jugador promedio de ajedrez. Esto último fue gracias al estudio efectivo del funcionamiento de Elo y del criterio de las jugadas que se realizan durante una partida. Todo lo anterior muestra el potencial tan grande
+y efectivo que tiene este tipo de entrenamientos, y abre la puerta a poder generalizar las ideas usadas en el transcurso del proyecto a otra área en donde sea necesario entrenar a una máquina. 
+
+Finalmente, el proceso de implementar el motor de ajedrez de Stockfish en el proyecto fue un proceso que resultó tomar más tiempo del que se tenía previsto desde un inicio, pues se llegaron
+a presentar una gran serie de errores que provocaron la necesidad de estudiar a fondo el funcionamiento del motor. Sin embargo, los resultados fueron satisfactorios, aunque el segmento de código asociado
+a Stockfish terminó siendo bastante pesado en términos de memoria.
+
+A nivel general, este proyecto resultó ser un gran reto para los miembros del grupo, con varios aprendizajes de por medio. Sin embargo, por las dificultades asociadas al uso de redes neuronales fue que el desarrollo de este proyecto se vio limitado en gran medida.
+
+\section{7. Escriba las limitaciones que tuvo al desarrollar el proyecto.}
+
+El desarrollo del proyecto, si bien ambicioso al emular arquitecturas de inteligencia artificial como AlphaZero, enfrentó limitaciones significativas tanto en el ámbito de la experiencia técnica, teorica, y la programación como en el de los recursos computacionales.
+
+\subsection{Limitaciones Académicas y Técnicas}
+La principal barrera fue el bajo background teórico del equipo en la creación y el entrenamiento de Redes Neuronales Profundas [5], [6] y Aprendizaje por Refuerzo [8]. Esto obligó al equipo a una extensa y rápida curva de aprendizaje para asimilar modelos complejos ya existentes, como la arquitectura ResNet de doble cabeza utilizada en AlphaZero, lo que consumió un tiempo considerable que habría sido dedicado a la optimización y pruebas del modelo. Sumado a esto, las diferencias en la experiencia en programación en R [11] entre los participantes introdujo problemas de eficiencia en la codificación, particularmente en la implementación de algoritmos complejos como la Búsqueda en Árbol Monte Carlo (MCTS) y la gestión eficiente de los tensores de datos (la función \texttt{fen.to.vector}).
+
+\subsection{Limitaciones Computacionales y de Escala}
+La limitación más crítica fue la capacidad de cómputo. Los modelos de DRL para juegos como el ajedrez requieren una gran cantidad de auto-entrenamiento para converger a una política superior [8]. Para obtener resultados concluyentes y una mejora significativa, se estima que se debería haber jugado al menos 1,000 partidas o más, un volumen que a pesar que se hizo uso de GPU especializa, es inviable sin acceso a clústeres de GPUs de alto rendimiento por parte de todos los colaborados. Esta restricción impidió realizar la cantidad necesaria de iteraciones de entrenamiento y exploración (\texttt{bot.vs.bot}), lo que se tradujo en un tiempo de convergencia extremadamente prolongado y limitó la capacidad del modelo para alcanzar un rendimiento competitivo. En la práctica, esta insuficiencia de datos de entrenamiento limitó la robustez de la política $\pi$ y la precisión de la función de valor $\hat{v}$.
 
 
+\newpage
+\normalsize 
+\thispagestyle{empty}
 
-3- Aplique dichas técnicas o métodos. Presente los resultados, analícelos y responda su pregunta de investigación.
+\begin{thebibliography}{99}
 
+% [4] Klein (2022) - Neural networks for chess
+\bibitem{Klein2022}
+D. Klein, "Neural networks for chess: The magic of deep and reinforcement learning revealed," arXiv, 2022. [En línea]. Disponible en: \url{https://arxiv.org/abs/2209.01506}
 
+% [5] Aggarwal (2018) - Neural networks and deep learning (Textbook)
+\bibitem{Aggarwal2018}
+C. C. Aggarwal, \textit{Neural networks and deep learning: A textbook}. Cham, Switzerland: Springer, 2018.
 
-4- Tome en consideración las anotaciones realizadas por el profesor y/o asistente.
+% [6] Bishop (2006) - Pattern recognition and machine learning (Textbook)
+\bibitem{Bishop2006}
+C. M. Bishop, \textit{Pattern recognition and machine learning}. New York, NY, USA: Springer Science+Business Media, 2006.
 
+% [7] Goodfellow, Bengio, Courville (2016) - Deep learning (Textbook)
+\bibitem{Goodfellow2016}
+I. Goodfellow, Y. Bengio, and A. Courville, \textit{Deep learning}. Cambridge, MA, USA: MIT Press, 2016.
 
-6- Escriba tres conclusiones obtenidas de su trabajo dando respuesta su pregunta de investigación.
+% [8] Silver et al. (2018) - A general reinforcement learning algorithm (AlphaZero)
+% Nota: Esta referencia es la misma que la [1] de la primera respuesta, pero con DOI. Usaremos la versión Science.
+\bibitem{Silver2018Science}
+D. Silver et al., "A general reinforcement learning algorithm that masters chess, shogi, and Go through self-play," \textit{Science}, vol. 362, no. 6419, pp. 1140–1144, Dec. 2018. [En línea]. Disponible en: \url{https://doi.org/10.1126/science.aar6404}
 
+% [9] Alam (2023) - Imputation techniques for missing data
+\bibitem{Alam2023}
+S. Alam, "An investigation of the imputation techniques for missing data," \textit{ScienceDirect}, 2023. [En línea]. Disponible en: \url{https://www.sciencedirect.com/science/article/pii/S2772662223001819}
 
-7- Escriba las limitaciones que tuvo al desarrollar el proyecto.
+% [10] DeLeo & Guven (s.f.) - Learning chess with language models
+\bibitem{DeLeoGuven}
+M. DeLeo and E. Guven, "Learning chess with language models and transformers," Whiting School of Engineering, Johns Hopkins University. [En línea].
+
+% [11] R Core Team (s.f.) - CRAN Manuals
+\bibitem{RCore}
+R Core Team, "CRAN: Manuals – The Comprehensive R Archive Network." [En línea]. Disponible en: \url{https://cran.r-project.org/manuals.html}
+
+\end{thebibliography}
 
 
 \newpage
@@ -110,299 +294,3 @@ Leonardo Vega Aragon (C38313)
   \Huge \textbf{Anexo}
 \end{center}
 \vspace*{\fill}
-
-\thispagestyle{empty}
-\begin{center}
-\Huge Universidad de Costa Rica
-
-\vspace{2cm}
-
-\Large Escuela de Matemática
-
-\vspace{2cm}
-
-\Large Herramientas de Ciencias de Datos I (CA-0204)
-
-\vspace{1cm}
-
-\Large Bitacora 2
-
-\vspace{1cm}
-
-\Large Bot Hatchet
-
-\vspace{1cm}
-\normalsize 
-
-Profesor: Luis Juárez Potoy
-
-\vspace{1cm}
-
-Estudiantes: \\
-Andres Zuñiga Mora (C38733) \\
-Anthonny Flores Rojas (C32975) \\
-Amy Chen Wu (C32203) \\
-Leonardo Vega Aragon (C38313)
-
-\vspace{2cm}
-
-\Large Fecha: `r Sys.Date()`
-\end{center}
-\newpage
-\normalsize 
-\thispagestyle{empty}
-\tableofcontents
-
-\newpage
-\setcounter{page}{1}
-
-## 1- Identifique los siguientes puntos para los datos con los que realizará su proyecto:
-
-### a. Características de los datos
-
-Los datos provienen de partidas de ajedrez simuladas entre distintos modelos de bots, principalmente las hechas por el mismo bot que estamos diseñando "Hatchet". Cada partida guarda sus datos con dos niveles de detalle:
-
-  - data_juego.csv       : información resumida de cada partida (resultado general, estado final, cantidad de jugadas, condiciones de finalización)
-  - data_fuerte.csv      : información detallada jugada por jugada (movimientos, tiempo medio de cada jugada, color, posiciones FEN, tablero final)
-
-Los datos son mixtos (variables categóricas y numéricas), generados artificial, aleatoriamente, bajo condiciones controladas (parametros que manipulamos en el codigo). Estos datos se guardan en un archivo llamado data_juevo.csv y data_fuerte.csv consecutivamente.
-
-### b. Población de estudio
-
-La población está compuesta por todas las posibles partidas de ajedrez jugadas por Hatchet bajo configuraciones. Cada fila de los dataFrame incluye configuraciones iniciales, movimientos secuenciales (FEN) y resultados finales.
-
-Ejemplos de variables dentro de la población:
-
-  - Tablas en tipo FEN (Forsyth–Edwards Notation): "4t1r1/p1p2pp1/.../4T1R1"
-  - Secuencias de movimientos : "Nf3 nf6 e4 e5 Bb5 a6"
-
-### c. Muestra observada
-
-La muestra observada corresponde al conjunto de partidas efectivamente simuladas y almacenadas en los dataframes. Es un subconjunto representativo de la población, limitado por parámetros de simulación (modo, modelo, profundidad de búsqueda, número de movimientos, etc.). Actualmente no se considera el tiempo de ejecución como variable una variable especifica, sino general, tomando una media del tiempo de respuesta de cada partida, aunque se planea implementarlo en fases posteriores de optimización de la red neuronal.
-
-### d. Unidad estadística o individuos
-
-Tanto para data_juego y data_fuerte la unidad estadistica o individuos a estudiar son las partidas de ajedrez representadas en tipo FEN y con datos completos de ellas en casa csv.
-
-### e. Variables de estudio
-
-Variables en data_juego:
-
-  - Modo                : Categórica nominal   : Tipo de simulación (Hatchet vs Hatchet, Hatchet vs motor externo)
-  - Modelo              : Categórica nominal   : Bot/Hatchet principal que juega
-  - Modelo_contrario    : Categórica nominal   : Bot/Hatchet oponente
-  - Finalizado          : Booleana             : Indica si la partida concluyó formalmente
-  - Jaque               : Booleana             : Estado final en jaque
-  - Mate                : Booleana             : Verdadero si terminó por jaque mate
-  - Ahogado             : Booleana             : Verdadero si terminó en tablas por ahogado
-  - Material            : Booleana             : Verdadero si hay material insuficiente para continuar
-  - Regla75             : Booleana             : Verdadero si se aplicó la regla de 75 movimientos
-  - Repeticion5         : Booleana             : Verdadero si hubo repetición de posición cinco veces
-  - Numero_de_movimientos: Cuantitativa discreta: Total de jugadas realizadas
-
-
-Variables en data_fuerte:
-
-  - Modo                    : Categórica nominal       : Tipo de simulación
-  - Modelo                  : Categórica nominal       : Bot/Hatchet que juega
-  - Modelo_contrario        : Categórica nominal       : Bot/Hatchet oponente
-  - Color                   : Categórica nominal       : Color con el que juega el modelo
-  - Resultado               : Categórica nominal       : Resultado de la partida
-  - Finalizado              : Booleana                 : Si la partida llegó a estado terminal
-  - Elo                     : Cuantitativa discreta    : Valoración Elo estimada según color y secuencia
-  - Jaque                   : Booleana                 : Estado registrado en jaque
-  - Mate                    : Booleana                 : Estado registrado en jaque mate
-  - Numero_de_movimientos   : Cuantitativa discreta    : Total de jugadas de la partida
-  - Movimientos             : Texto estructurado       : Secuencia de jugadas en notación algebraica
-  - Tiempo_movimiento_medio: Cuantitativa continua     : Duración promedio por movimiento
-  - Tabla_final             : Texto estructurado       : Posición final en FEN
-  - Tabla_totales           : Texto estructurado       : Historial completo de posiciones FEN de la partida
-  
-
-  
-Siendo Elo y Resultados las unicas dos no tomadas en cuenta para esta entrega.
-
-## 2. Agregar las primeras 5 filas de su tabla de datos
-
-En esta sección se presentan las primeras 5 observaciones de los dos DataFrames utilizados, data_juego (datos generales) y data_fuerte (datos específicos del desempeño del modelo).
-
-```{r, echo=TRUE, message=FALSE, warning=FALSE}
-
-# Establecer directorio de trabajo
-setwd("C:\\Users\\Anthonny\\Documents\\Progamacion\\R\\UCR\\CA-0204\\Proyecto\\datos")
-
-# Cargar los DataFrames 
-data.juego  <- read.csv("data_juego.csv")
-data.fuerte <- read.csv("data_fuerte.csv")
-
-# Mostrar las primeras 5 filas en formato tabla
-cat("Primeras 5 filas del DataFrame data_juego")
-head(data.juego, 5)
-
-```
-
-Cabe recalcar que las siguientes líneas no son legibles si no se abren en un archivo .csv.
-
-```{r, echo=TRUE, message=FALSE, warning=FALSE}
-cat("Primeras 5 filas del DataFrame data_fuerte")
-head(data.fuerte, 5)
-```
-
-## 3- Resumen de 5 números de las variables cuantitativas y analizar el mismo.
-
-Por la manera en la que se diseñó el presente proyecto, no se ha hecho uso de un dataframe externo que contenga variables cuantitativas. Por ende, las variables cuantitativas que se explicarán a continuación son aquellas que aparecerán en los dataframes próximos a generar:
-
-### 1. Elo
-
-Según la página Chess.com, la puntuación Elo es un número basado en la actuación de un jugador en partidas evaluadas disputadas anteriormente. Básicamente, mide la fuerza relativa de un jugador. Este sistema funciona de tal manera que premia en mayor magnitud a los jugadores más novatos (ganan más puntos) y castiga de mayor manera a los jugadores más expertos (pierden más puntos). Esta variable toma valores enteros no negativos. Es importante resaltar que el mayor elo pertenecinte a una persona en 2025 es de 2839, mientras que el bot con un mayor elo tiene un total de 3643. Estos dos valores, entonces, puede servir como parámetros para comparar el desempeño que muestren los bots entrenados durante el desarrollo de este proyecto.
-
-### 2. Número de movimientos.
-
-Esta variable toma el valor de un entero no negativo y representa el número de movimientos que realizó un jugador o un bot durante la realización de un juego.
-
-### 3. Tiempo movimiento medio.
-
-Esta variable representa la media de segundos que duró el jugador o el bot en hacer cada uno de sus movimientos durante la realización de un juego.
-
-### 4. Score.
-
-Esta variable toma valores de -1 a 1 y es utilizada con el fin de penalizar o premiar los movimientos que haga el bot durante su entrenamiento. Básicamente, antes de hacer cualquier movimiento el bot analiza todas las posibles jugadas y elije la que tenga una variable 'score' más alta. Cada una de esas variables va cambiando dependiendo del turno (pues después de cada turno se le añade una ligera cantidad de "ruido" a cada variable score) o de los movimientos del bot. Por ejemplo, si una jugada se repite tres veces seguidas entonces su score disminuye. Esta variable no se llega a mostrar al usuario en ningún momento.
-
-### 5. Resultado.
-
-Esta variable toma valores de 0, 0.5 ó 1. 0 significa que el jugador en cuestión perdió la partida, 0.5 significa que quedó empate y 1 significa que ganó el juego.
-
-## 4- Hacer al menos un gráfico que describa la distribución para cada una de las variables cuantitativas. 
-
-```{r setup, include=FALSE}
-# Libreria propia
-# Libreria propia desde carpeta superior
-source("../codigo/datos_bitacora_ajedrez.R")
-
-```
-
-```{r, echo=TRUE, message=FALSE, warning=FALSE}
-# Variables cuantitativas
-quant.vars.fuerte <- c("Numero_de_movimientos", "Tiempo_movimiento_medio")
-
-# Graficar distribucion
-plot.quantitative.distribution(data.fuerte, quant.vars.fuerte)
-```
-
-## 5- Hacer al menos dos gráficos que describan la relación entre las variables.
-
-```{r, echo=TRUE, message=FALSE, warning=FALSE}
-# Graficar relacion entre Numero_de_movimientos y Tiempo_movimiento_medio
-plot.quantitative.relationship(data.fuerte, "Numero_de_movimientos", "Tiempo_movimiento_medio")
-# Graficar relacion entre Numero_de_movimientos y Tiempo_movimiento_medio
-plot.quantitative.relationship(data.fuerte, "Numero_de_movimientos", "Mate")
-```
-
-## 6- Hacer al menos un gráfico que muestre la distribución de las variables categóricas.
-
-```{r, echo=TRUE, message=FALSE, warning=FALSE}
-# Variables categóricas
-cat.vars.juego <- c("Jaque", "Mate")
-
-# Graficar distribución categórica
-plot.categorical.distribution(data.juego, cat.vars.juego)
-```
-
-
-## 7- Identificar valores faltantes y posibles outliers.
-
-Para este punto cabe recalcar que no contamos con valores faltantes, ya que los datos son autogenerados, y los valores faltantes serían generados por errores computacionales, y de igual forma, si los datos importantes de una partida se pierden, la partida entera se va a descartar. Si es un dato secundario (informativo) se perdiese solo se va a tomar la media (en el caso de número de movimientos, etc.) o el dato más abundante (en casos como el color con el que está jugando el bot, etc.), ya que la media nos va a permitir preservar la data lo más impoluta posible, y en el caso del dato más abundante, nos permite tomar una generalización de cada partida; y por el momento no se han considerado outliers, depende totalmente de las decisiones que se vayan realizando en el código para mejorar la escogencia y tiempo de respuesta de cada movimiento, ya que por el momento, para mostrar los datos en esta bitácora, se seleccionó un máximo de 240 movimientos. Ya el número de movimientos es un dato que limitamos en el código para evitar cálculos innecesarios de partidas a punto de finalizar, o partidas sin fin. Reemplazar o descartar estos outliers no se ve como algo factible, ya que cada dato fuera de lo normal recalca una importante corrección en el código.
-
-Cabe recalcar que estos outliers no son de gran importancia para el proyecto, ya que por ejemplo, las tablas por repetición de 5 movimientos de una misma pieza son muy comunes al inicio de los modelos. Este tipo de errores los hemos ido corrigiendo, implementando medidas como tener en cuenta el historial de las posiciones por partida. Y en este tipo de data, los outliers son totalmente dependientes de los metodos a aplicar a futuro para una optimizacion de la red neuronal y la escogencia del mejor movimiento.
-
-## 8- Investigar técnicas que permitan subsanar los valores perdidos y outliers.
-
-Como se especificó anteriormente, los tratamientos para valores perdidos y outliers son simples. Para los valores perdidos, si son de suma importancia, la partida se descarta; si son secundarios, se reemplazan por la media o el valor más abundante. Esta estrategia se fundamenta en la simplicidad y eficacia de métodos como la imputación por media o moda, que son comúnmente utilizados en análisis exploratorios debido a su facilidad de implementación y rapidez. Según Alam, Ayub, Arora y Khan (2023), técnicas como la imputación por media, mediana o moda pueden ser útiles en ciertos contextos, aunque pueden introducir sesgos si no se consideran las relaciones entre las variables y la naturaleza de los datos. En el contexto de este proyecto, donde los datos son autogenerados y no se han identificado valores faltantes significativos, la elección de imputar por la media o el valor más frecuente (moda) permite mantener la integridad del conjunto de datos y conservar la máxima cantidad de información sin afectar la validez del análisis.
-
-En cuanto a los outliers, por el momento no se han considerado debido a que cada dato fuera de lo normal puede señalar una corrección importante en el código. Además, estos outliers no son de gran importancia para el proyecto, ya que, por ejemplo, las tablas por repetición de cinco movimientos de una misma pieza son muy comunes al inicio de los modelos. Este tipo de errores los hemos ido corrigiendo implementando medidas como tener en cuenta el historial de las posiciones por partida.
-
-\newpage
-\normalsize 
-\thispagestyle{empty}
-
-# Referencias:
-
-\begin{hangparas}{1.27cm}{1}
-Klein, D. (2022). Neural networks for chess: The magic of deep and reinforcement learning revealed. arXiv. https://arxiv.org/abs/2209.01506
-
-Aggarwal, C. C. (2018). Neural networks and deep learning: A textbook. Springer.
-
-Bishop, C. M. (2006). Pattern recognition and machine learning. Springer Science+Business Media.
-
-Goodfellow, I., Bengio, Y., \& Courville, A. (2016). Deep learning. MIT Press
-
-Silver, D., Hubert, T., Schrittwieser, J., Antonoglou, I., Lai, M., Guez, A., Lanctot, M., Sifre, L., Kumaran, D., Graepel, T., Lillicrap, T., Simonyan, K., \& Hassabis, D. (2018). A general reinforcement learning algorithm that masters chess, shogi, and Go through self-play. Science, 362(6419), 1140–1144. https://doi.org/10.1126/science.aar6404
-
-Alam, S. (2023). An investigation of the imputation techniques for missing data. ScienceDirect. Recuperado de https://www.sciencedirect.com/science/article/pii/S2772662223001819
-
-DeLeo, M., \& Guven, E. (s.f.). Learning chess with language models and transformers. Whiting School of Engineering, Johns Hopkins University.
-
-R Core Team. (s.f.). CRAN: Manuals – The Comprehensive R Archive Network. Recuperado de https://cran.r-project.org/manuals.html
-\end{hangparas}
-
-\newpage
-\thispagestyle{empty}
-\vspace*{\fill}
-\begin{center}
-  \Huge Bitacora 1
-\end{center}
-\vspace*{\fill}
-
-\newpage
-\thispagestyle{empty}
-\begin{center}
-\Huge UCR
-
-\vspace{2cm}
-
-\Large Escuela de Matemática
-
-\vspace{2cm}
-
-\Large Herramientas de Ciencias de Datos I (CA-0204)
-
-\vspace{1cm}
-
-\Large Bitacora 1: Escogencia de tema para el proyecto grupal
-
-\vspace{2cm}
-\normalsize 
-Profesor: Luis Juárez Potoy
-
-\vspace{1cm}
-
-Estudiantes: \\
-Andres Zuñiga Mora (C38733) \\
-Anthonny Flores Rojas (C32975) \\
-Amy Chen Wu (C32203) \\
-Leonardo Vega Aragon (C38313)
-
-\vspace{2cm}
-
-\Large Fecha: `r Sys.Date()`
-\end{center}
-
-\newpage
-\normalsize 
-# Temas planteados inicialmente
-
-- Simulación de interacción entre partículas subatómicas
-- Criptografía con redes neuronales para seguridad de datos
-- Modelado de probabilidades y estrategias en Póker mediante cadenas de Markov
-- Modelado de epidemias con movimiento Browniano
-- Desarrollo de un bot de ajedrez utilizando algoritmos de autoaprendizaje con jugadas aleatorias
-
-De los temas propuestos, se valoró tanto la dificultad técnica como la aplicabilidad dentro del entorno de R, además de su conexión con problemas reales. La simulación de interacción entre partículas subatómicas generó interés por su trasfondo físico, pero fue descartada rápidamente: exige un manejo avanzado de mecánica cuántica (el cual ninguno de los compañeros posee), interacción de fuerzas fundamentales y modelos de física computacional que sobrepasan el alcance del proyecto. Su nivel de formalismo matemático y de teoría de campos demanda un tiempo que no es factible. En el caso de la criptografía con redes neuronales, se enfrentó el mismo obstáculo: la complejidad de integrar aprendizaje profundo con protocolos de seguridad de datos exige un dominio sólido de machine learning aplicado a criptografía moderna, lo cual rebasa el margen de trabajo. El tema de modelado de epidemias con movimiento Browniano también se dejó de lado, ya que aunque su atractivo matemático y probabilístico es innegable pero, no se encontró una forma clara de vincularlo con aplicaciones prácticas inmediatas que justificaran el esfuerzo de simularlo en R en el contexto del curso. Por otro lado, el modelado de probabilidades y estrategias en Póker mediante cadenas de Markov fue evaluado como viable, pero perdió peso frente a otras opciones por no aportar tanto en términos de conexión con algoritmos de autoaprendizaje contemporáneos (redes neuronales). Finalmente, el desarrollo de un bot de ajedrez con algoritmos de autoaprendizaje y jugadas aleatorias destacó como la opción más completa: accesible, con suficiente rigor matemático y alineada con campos como teoría de juegos, probabilidad y aplicaciones en inteligencia artificial, convirtiéndose en la elección final.
-
-# Tema escogido
-
-El tema escogido fue Desarrollo de un bot de ajedrez utilizando algoritmos de autoaprendizaje con jugadas aleatorias. La motivación central de esta selección radica en que el ajedrez, por ser un juego de estrategia universalmente estudiado, resulta idóneo para probar y aplicar metodologías de autoaprendizaje como Q-learning o redes neuronales. La lógica del bot consiste en iniciar con jugadas aleatorias y, a partir de la retroalimentación de recompensas y penalizaciones, ajustar progresivamente sus decisiones hasta alcanzar patrones estratégicos más eficientes.
-
-Este enfoque conecta de manera directa con escenarios del mundo real, dado que el ajedrez encapsula conceptos de estadística, probabilidad, teoría de juegos y toma de decisiones bajo incertidumbre. En ese sentido, la implementación en R no solo permite modelar dinámicas complejas del juego, sino también extrapolar los resultados a contextos de optimización y aprendizaje automatizado presentes en inteligencia artificial y ciencia de datos aplicada.
-
-La elección final se fundamenta en su balance entre factibilidad técnica y profundidad matemática. Este tema no solo abre la posibilidad de evaluar probabilidades de éxito en distintas jugadas, sino que también permite diseñar y refinar estrategias que maximicen el rendimiento del bot a partir de una base inicial aleatoria. Con ello, se obtiene un proyecto que combina un ejercicio mas practico con un aporte conceptual en las matematicas y algoritmos de autoaprendisaje.

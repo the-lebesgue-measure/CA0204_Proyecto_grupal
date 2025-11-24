@@ -58,7 +58,7 @@ main <- function(){
     mode = readline()
     repeat {
       if (!is.na(as.numeric(mode))){
-        if(as.integer(mode) == mode && 0 < mode && mode < 5 && mode != 3) break
+        if(as.integer(mode) == mode && 0 < mode && mode < 5) break
       }
       mode = readline("Por favor digite e imprima solo una de las opciones dadas: ")
     }
@@ -69,6 +69,7 @@ main <- function(){
     } else if (mode == "2") {
       bot.vs.player(model, games.data, games.heavy.data)
     } else if (mode == "3") {
+      bot.vs.external(model, games.data, games.heavy.data)
     } else if (mode == "4") {
       leave = TRUE
       cat("\nGracias por usar el Hatchet1\n")
@@ -79,14 +80,12 @@ main <- function(){
     option = readline()
     repeat {
       if (!is.na(as.numeric(option))){
-        if(as.integer(option) == option && (0 == option || 1 = option)) break
+        if(as.integer(option) == option && (0 == option || 1 == option)) break
       }
       option = readline("Por favor digite e imprima solo una de las opciones dadas: ")
     }
     if(option == 1){
       data.manege(games.data, games.heavy.data)
-    }
-    else {
     }
     
     # Guardar data

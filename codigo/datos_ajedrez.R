@@ -12,7 +12,7 @@ library(chess)
 # elo.function <- function(){}
 
 # Funcion para guardar datos principales de las partidas
-df.game.data <- function(df, game, mode, num.moves, model.name = "Hatchet1", other.model.name = "Hatchet1") {
+df.game.data <- function(df, game, mode, num.moves, model.name = "Hatchet1", other.model.name = "Hatchet1", final.result = NA) {
   
   # Data principal
   df.copy = data.frame(
@@ -20,6 +20,7 @@ df.game.data <- function(df, game, mode, num.moves, model.name = "Hatchet1", oth
     Modelo = model.name,
     Modelo_contrario = other.model.name,
     Finalizado = is_game_over(game),
+    Resultado = final.result, 
     Jaque = is_check(game),
     Mate = is_checkmate(game),
     Ahogado = is_stalemate(game),
@@ -38,7 +39,8 @@ df.game.data <- function(df, game, mode, num.moves, model.name = "Hatchet1", oth
 }
 
 # Funcion para guardar datos secundarios de las partidas
-df.heavy.game.data <- function (df, game, mode, moves, num.moves, move.times = 0, color, model.name = "Hatchet1", other.model.name = "Hatchet1", history.positions = ""){
+# MODIFICADA: Se agregó el argumento 'final.result' y se usa para la columna 'Resultado_Num'.
+df.heavy.game.data <- function (df, game, mode, moves, num.moves, move.times = 0, color, model.name = "Hatchet1", other.model.name = "Hatchet1", history.positions = "", final.result = NA){
   
   # Data principal
   df.copy = data.frame(
@@ -46,7 +48,7 @@ df.heavy.game.data <- function (df, game, mode, moves, num.moves, move.times = 0
     Modelo = model.name,
     Modelo_contrario = other.model.name,
     Color = color,
-    # Resultado = outcome(game),
+    Resultado_Num = final.result, 
     Finalizado = is_game_over(game),
     # Elo = elo.function(moves, color,.Resultado..), # Esto hay que hacerlo para la proxima entrega
     Jaque = is_check(game),

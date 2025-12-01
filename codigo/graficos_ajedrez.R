@@ -39,18 +39,18 @@ fen.to.matrix <- function(fen) {
 map.to.unicode <- function(matriz) { 
   
   matriz.unicode = matriz
-  matriz.unicode[matriz.unicode == "P"] = "♙" # Negras
-  matriz.unicode[matriz.unicode == "N"] = "♘"
-  matriz.unicode[matriz.unicode == "B"] = "♗"
-  matriz.unicode[matriz.unicode == "R"] = "♖"
-  matriz.unicode[matriz.unicode == "Q"] = "♕"
-  matriz.unicode[matriz.unicode == "K"] = "♔"
-  matriz.unicode[matriz.unicode == "p"] = "♟" # Blancas
-  matriz.unicode[matriz.unicode == "n"] = "♞"
-  matriz.unicode[matriz.unicode == "b"] = "♝"
-  matriz.unicode[matriz.unicode == "r"] = "♜"
-  matriz.unicode[matriz.unicode == "q"] = "♛"
-  matriz.unicode[matriz.unicode == "k"] = "♚"
+  matriz.unicode[matriz.unicode == "p"] = "♙" # Negras
+  matriz.unicode[matriz.unicode == "n"] = "♘"
+  matriz.unicode[matriz.unicode == "b"] = "♗"
+  matriz.unicode[matriz.unicode == "r"] = "♖"
+  matriz.unicode[matriz.unicode == "q"] = "♕"
+  matriz.unicode[matriz.unicode == "k"] = "♔"
+  matriz.unicode[matriz.unicode == "P"] = "♟" # Blancas
+  matriz.unicode[matriz.unicode == "N"] = "♞"
+  matriz.unicode[matriz.unicode == "B"] = "♝"
+  matriz.unicode[matriz.unicode == "R"] = "♜"
+  matriz.unicode[matriz.unicode == "Q"] = "♛"
+  matriz.unicode[matriz.unicode == "K"] = "♚"
   matriz.unicode[matriz.unicode == ""] = ". "
   
   return(matriz.unicode)

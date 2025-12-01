@@ -45,9 +45,9 @@ main <- function(){
   cat("\nBienvenido al proyecto Hatchet1, bot de ajedrez")
   cat("\nHecho por:")
   cat("\nAnthonny Flores (C32975)")
+  cat("\nLeonardo Vega Aragon (C38313)")
   cat("\nAndres Zuñiga Mora (C38733)")
   cat("\nAmy Chen Wu (C32203)")
-  cat("\nLeonardo Vega Aragon (C38313)")
   cat("\nPara mas informacion ver la documentacion\n")
   
   # Consola para la manipulacion de modelo

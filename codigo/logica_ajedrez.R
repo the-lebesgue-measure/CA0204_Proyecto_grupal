@@ -1,9 +1,10 @@
 # logica_ajedrez.R
 # Hecho por:
 # Anthonny Flores (C32875)
+# Leonardo Vega Aragon (C38313)
 # Andres Zuniga Mora (C38733)
 # Amy Chen Wu (C32203)
-# Leonardo Vega Aragon (C38313)
+
 
 # Librerias
 library(chess)
@@ -14,150 +15,258 @@ library(processx)
 source("graficos_ajedrez.R")
 source("utils.R")
 
-# Funcione para convertir FEN a array 8x8x18 (tensor)
+mcts.tree = new.env() # Entorno (hash map/diccionario) global para almacenar y acceder a las estadisticas de los nodos del árbol MCTS.
+C.PUCT = 2.0 # Coeficiente de exploracion MCTS (controla el equilibrio exploracion/explotacion en PUCT)
+NUM.SIMULATIONS = 20 # Número de simulaciones MCTS por movimiento. (¡ADVERTENCIA: 20 es muy bajo!)
+
+
+# Funcion para calcular el Valor UCB/PUCT (Upper Confidence Bound applied to Trees)
+calculate.ucb = function(Q, P, N.sum, N.current, C.puct = C.PUCT) {
+  # Formula PUCT: Q(s,a) + C * P(s,a) * sqrt(N_total) / (1 + N(s,a))
+  # Q: Valor promedio de la accion (W/N)
+  # P: Probabilidad Priorizada de la NN
+  # N.sum: Total de visitas al nodo padre
+  # N.current: Visitas de la accion actual
+  UCB = Q + C.puct * P * sqrt(N.sum) / (1 + N.current) 
+  return(UCB) 
+}
+
+# Funcion para aplicar Ruido de Dirichlet
+apply.dirichlet.noise = function(policy.vector, alpha = 0.3, epsilon = 0.25) {
+  # Genera ruido de Dirichlet para promover la exploracion de movimientos en la raiz
+  noise = rgamma(length(policy.vector), shape = alpha, rate = 1) 
+  noise = noise / sum(noise) # Normalizar el ruido
+  # Combina la politica original (P) con el ruido (P_noisy = (1-epsilon)*P + epsilon*Noise)
+  noisy.policy = (1 - epsilon) * policy.vector + epsilon * noise 
+  return(noisy.policy / sum(noisy.policy)) # Normalizar la politica ruidosa final
+}
+
+# Funcion para obtener el valor final de la partida
+get.game.result.value = function(game) {
+  if (is_game_over(game)) { # Si finalizo la partida
+    result = result(game) # Obtener resultado (e.g., "1-0", "0-1", "1/2-1/2")
+    if (result == "1-0") return(1) # Blanco gana (Valor +1)
+    if (result == "0-1") return(-1) # Negro gana (Valor -1)
+    return(0) # Empate (Valor 0)
+  }
+  return(NA) # Si el juego no termina devuelve NA
+}
+
+# Funcion para convertir FEN a tensor (Input para la Red Neuronal)
 fen.to.vector = function(fen, num.repetitions = 0) {
-  # Codificacion minima de 18 planos
-  matrixx = array(0, dim = c(8, 8, 18)) # Tensor de entrada
-  board.data = strsplit(fen, " ")[[1]] # Datos de FEN
-  board = board.data[1] # Tablero
+  matrixx = array(0, dim = c(8, 8, 18)) # Tensor de entrada 8x8x18
+  board.data = strsplit(fen, " ")[[1]] # Datos de FEN (tablero, turno, enroque, etc.)
+  board = board.data[1] # Solo el tablero
   rows = strsplit(board, "/")[[1]] # Filas
   
-  # Modelo estandar
-  map.piece = c("P"=1, "N"=2, "B"=3, "R"=4, "Q"=5, "K"=6, "p"=7, "n"=8, "b"=9, "r"=10, "q"=11, "k"=12) # Mapeo de piezas
+  # Mapeo de piezas a los primeros 12 canales (Blancas: 1-6, Negras: 7-12)
+  map.piece = c("P"=1, "N"=2, "B"=3, "R"=4, "Q"=5, "K"=6, "p"=7, "n"=8, "b"=9, "r"=10, "q"=11, "k"=12) 
   
-  for (y in 1:8) { # Recorrido de filas
-    x = 1 # Columna inicial
-    for (char in strsplit(rows[9 - y], "")[[1]]) { # Recorrido de caracteres
+  for (y in 1:8) { # Recorrido de filas (y)
+    x = 1 # Columna inicial (x)
+    for (char in strsplit(rows[9 - y], "")[[1]]) { # Recorrido de caracteres (la fila 8 de FEN es la fila 1 del tensor)
       if (grepl("[1-8]", char)) {
         x = x + as.integer(char) # Saltar casillas vacias
       } else {
-        piece = map.piece[char] # Obtener la obtener el numero de la pieza
-        matrixx[y, x, piece] = 1 # Poner 1 en la posicion de la pieza
+        piece = map.piece[char] # Obtener el numero de la pieza
+        matrixx[y, x, piece] = 1 # Poner 1 en el canal correspondiente
         x = x + 1
       }
     }
   }
   
-  if (board.data[2] == "w") { # Si es turno blanco
-    matrixx[,, 13] = 1 # Llenar canal 13
+  # Canales de características adicionales (Metadata)
+  if (board.data[2] == "w") { # Canal 13: Turno (1 si es Blanco, 0 si es Negro)
+    matrixx[,, 13] = 1 
   }
   
-  if (board.data[3] != "-") { # Si hay opcion de enroque
-    matrixx[,, 14] = 1 # Llenar canal 14
+  if (board.data[3] != "-") { # Canal 14: Opción de enroque
+    matrixx[,, 14] = 1 
   }
   
-  if (num.repetitions >= 2) { # Si la posicion se repitio 2 o mas veces
-    matrixx[,, 15] = 1 # Llenar canal 15
+  if (num.repetitions >= 2) { # Canal 15: Repetición de posición (para la regla de 50 movimientos y 3 repeticiones)
+    matrixx[,, 15] = 1 
   }
-  # Capa constante
-  matrixx[,, 16] = 1 # Llenar canal 16
+  matrixx[,, 16] = 1 # Canal 16: Capa constante (siempre 1)
   
-  if (length(board.data) >= 5) {
+  if (length(board.data) >= 5) { # Canal 17: Reloj de medio movimiento (Half-move clock, para la regla de 50)
     half.move.clock = as.integer(board.data[5])
-    normalized.clock = min(1, half.move.clock / 100.0) # <--- CONFLICTO RESUELTO
+    normalized.clock = min(1, half.move.clock / 100.0) # Normalizado entre 0 y 1
     matrixx[,, 17] = normalized.clock
   }
   
-  if (length(board.data) == 6) {
+  if (length(board.data) == 6) { # Canal 18: Número de movimiento completo (Full-move number)
     full.move.number = as.integer(board.data[6])
-    normalized.move = min(1, full.move.number / 200.0) # <--- CONFLICTO RESUELTO
+    normalized.move = min(1, full.move.number / 200.0) # Normalizado entre 0 y 1
     matrixx[,, 18] = normalized.move
   }
   
-  array_reshape(matrixx, c(1, 8, 8, 18)) # Batch dim para predict
+  array_reshape(matrixx, c(1, 8, 8, 18)) # Reajusta para que sea un tensor de lote (Batch) para la predicción del modelo
 }
 
-# Monte Carlo Tree Search
-mcts.tree = new.env() # Entorno para el arbol
-C.PUCT = 2.0 # Coeficiente de exploracion MCTS
-NUM.SIMULATIONS = 3200 # <--- CONFLICTO RESUELTO
-
-# Funcion para el Valor UCB (Upper Confidence Bound)
-calculate.ucb = function(node.stats, P.vector, C.puct = C.PUCT) {
-  # Q(s, a) + C * P(s, a) * sqrt(sum_b N(s, b)) / (1 + N(s, a))
-  Q = ifelse(node.stats$N > 0, node.stats$W / node.stats$N, 0) # Valor Q promedio
-  N.sum = sum(node.stats$N) # Total de visitas
-  UCB = Q + C.puct * P.vector * sqrt(N.sum) / (1 + node.stats$N) # Formula UCB para seleccionar el nodo a expandir
-  return(UCB) # <--- CONFLICTO RESUELTO
-}
-
-# Funcion para el resultado final de la partida
-get.game.result.value = function(game) {
-  if (is_game_over(game)) { # Si finalizo la partida
-    result = result(game) # Obtener resultado
-    if (result == "1-0") return(1) # Blanco gana
-    if (result == "0-1") return(-1) # Negro gana
-    return(0) # Empate
+# Funcion para obtener o inicializar un nodo en el arbol MCTS
+get.node.stats = function(fen.key, legal.moves, P.model = NULL) {
+  if (exists(fen.key, envir = mcts.tree)) {
+    return(get(fen.key, envir = mcts.tree)) # Si existe, retorna las estadisticas
   }
-  return(NA) # Si el juego no termina devuelve NA
+  
+  # Inicializacion de un nuevo nodo
+  N = setNames(rep(0, length(legal.moves)), legal.moves) # N: Contador de Visitas por accion
+  W = setNames(rep(0, length(legal.moves)), legal.moves) # W: Suma de Valores/Ganancias por accion
+  
+  if (is.null(P.model)) { 
+    P = N # P: Probabilidad Priorizada (se inicializa con ceros si no hay prediccion)
+  } else {
+    P = setNames(P.model, legal.moves) # P: Asignar la probabilidad priorizada P de la NN
+  }
+  
+  node.stats = list(N = N, W = W, P = P) # Estructura del nodo
+  assign(fen.key, node.stats, envir = mcts.tree) # Guardar en el entorno mcts.tree
+  return(node.stats)
 }
 
-# Funcion para aplicar Ruido de Dirichlet
-apply.dirichlet.noise = function(policy.vector, alpha = 0.3, epsilon = 0.25) {
-  noise = rgamma(length(policy.vector), shape = alpha, rate = 1) # Generar ruido con distribucion Gamma
-  noise = noise / sum(noise) # Normalizar ruido
-  noisy.policy = (1 - epsilon) * policy.vector + epsilon * noise # Combina la politica original con el ruido para fomentar exploracion
-  return(noisy.policy / sum(noisy.policy)) # Normalizar
-}
-
-# Funcion para MCTS
+# Funcion para correr el algoritmo MCTS (Monte Carlo Tree Search)
 run.mcts = function(game, model, num.simulations = NUM.SIMULATIONS, apply.noise = FALSE) {
   
-  current.fen = fen(game)
-  input.tensor = fen.to.vector(current.fen)
-  
-  prediction = model(input.tensor) # Obtiene la prediccion de la red neuronal
-  P.model = c(as.numeric(prediction$policy))
-  
-  # Correccion del valor (Value):
-  V.model = as.numeric(prediction$value) # El valor V.model es la prediccion del valor de la posicion
+  root.fen = fen(game)
+  input.tensor = fen.to.vector(root.fen)
+  prediction = model(input.tensor) # Prediccion inicial de la NN (Valor V y Politica P)
   
   legal.moves = moves(game)
+  P.model.raw = c(as.numeric(prediction$policy))
+  P.model = P.model.raw[1:length(legal.moves)] # Seleccionar la politica solo para los movimientos legales
   
-  # P.MCTS es placeholder aqui, en un MCTS completo seria el resultado de las 3200 simulaciones.
-  P.MCTS = setNames(rep(1/length(legal.moves), length(legal.moves)), legal.moves) # Placeholder de politica que se usaria como vector Pi
+  root.stats = get.node.stats(root.fen, legal.moves, P.model) # Inicializar el nodo raiz
   
-  if (apply.noise) { # Si se aplica ruido
-    P.MCTS = apply.dirichlet.noise(P.MCTS) # Aplicar ruido
+  if (apply.noise) {
+    root.stats$P = apply.dirichlet.noise(root.stats$P) # Aplicar ruido solo a la raiz para Self-Play
   }
   
-  best.action.name = names(which.max(P.MCTS)) # Mejor movimiento
+  # Bucle de Simulaciones MCTS
+  for (i in 1:num.simulations) {
+    current.game = game # Copia del juego (para no modificar la raiz)
+    path = list() # Para guardar la trayectoria de los nodos visitados (FEN y movimiento)
+    
+    while (!is_game_over(current.game)) {
+      current.fen = fen(current.game)
+      current.stats = get.node.stats(current.fen, moves(current.game))
+      
+      if (sum(current.stats$N) == 0) { # Si el nodo no se ha visitado (Expansion)
+        # Evaluar el nuevo nodo con la NN
+        input.tensor = fen.to.vector(current.fen)
+        prediction = model(input.tensor)
+        V.model = as.numeric(prediction$value) # Resultado a retropropagar (Valor V)
+        
+        legal.moves = moves(current.game)
+        P.model.raw = c(as.numeric(prediction$policy))
+        P.model = P.model.raw[1:length(legal.moves)] 
+        
+        current.stats$P = setNames(P.model, legal.moves) # Guardar P_model en el nodo
+        break # Terminar la fase de Selección/Expansión
+      }
+      
+      # Si el nodo ya fue visitado, usamos la formula PUCT (Seleccion)
+      N.sum = sum(current.stats$N)
+      Q = ifelse(current.stats$N > 0, current.stats$W / current.stats$N, 0) # Q(s,a) (Valor promedio: Ganancias/Visitas)
+      ucb.values = calculate.ucb(Q, current.stats$P, N.sum, current.stats$N) # Calcular UCB/PUCT
+      
+      selected.move = names(which.max(ucb.values)) # Seleccionar la accion con el PUCT maximo
+      
+      path[[length(path) + 1]] = list(fen = current.fen, move = selected.move) # Registrar el nodo y el movimiento en la trayectoria
+      
+      current.game = push_move(current.game, selected.move) # Realizar el movimiento
+    }
+    
+    if (is_game_over(current.game)) { # Si el juego termino (checkmate/draw)
+      Z = get.game.result.value(current.game) # Obtener el valor final (1, 0, -1)
+    } else {
+      Z = V.model # Usar la prediccion V de la NN (Evaluación de un nodo hoja)
+    }
+    
+    # Retropropagacion (Backpropagation)
+    for (node.data in rev(path)) { # Iterar sobre el camino hacia arriba
+      stats = get(node.data$fen, envir = mcts.tree)
+      
+      Z = -Z # Multiplicar el valor por -1 (Cambio de perspectiva para el jugador anterior)
+      
+      stats$N[node.data$move] = stats$N[node.data$move] + 1 # Actualizar visitas
+      stats$W[node.data$move] = stats$W[node.data$move] + Z # Actualizar suma de valores (Ganancias)
+      
+      assign(node.data$fen, stats, envir = mcts.tree) # Guardar las estadisticas actualizadas
+    }
+  }
+  
+  final.visits = root.stats$N
+  P.MCTS.final = final.visits / sum(final.visits) # Politica objetivo (Pi) es visitas normalizadas
+  
+  best.action.name = names(which.max(final.visits)) # Mejor movimiento para la explotacion (mas visitas)
+  
+  Q.best.move = root.stats$W[best.action.name] / root.stats$N[best.action.name] # Q promedio del mejor movimiento
   
   return(list(
-    best.move = best.action.name, # Mejor movimiento
-    policy.vector = P.MCTS, # Politica objetivo (vector Pi)
-    # CORRECCION: Usar V.model (prediccion de la NN) en lugar de las variables eliminadas
-    value = V.model # Q(s, a)
+    best.move = best.action.name,
+    policy.vector = P.MCTS.final,
+    value = Q.best.move 
   ))
 }
 
-# Funcion para corregir y elegir el mejor movimiento
-best.move = function(game, model, history.positions = NULL, move.count = 0) {
+# Funcion para elegir el mejor movimiento (ACTUALIZADA con controles de robustez)
+best.move = function(game, model, move.count = 0) {
+  moves.list = moves(game) # La lista de movimientos legales originales
+  if (length(moves.list) == 0) return(NULL) # Si no hay movimientos, retornar NULL (partida terminada)
   
-  moves.list = moves(game) # Movimientos legales
-  if (length(moves.list) == 0) return(NULL) # Si no hay movimientos
+  # Logica de exploracion/explotacion
+  noise.enabled = (move.count < 30) # Ruido para auto-entrenamiento
+  high.temp = (move.count < 15) # Temperatura alta para exploración inicial
   
-  noise.enabled = FALSE # No habilitamos ruido
-  mcts.result = run.mcts(game, model, apply.noise = noise.enabled) # Ejecutar MCTS
-  P.MCTS = mcts.result$policy.vector # Obtener vector Pi
+  mcts.result = run.mcts(game, model, apply.noise = noise.enabled) 
+  P.MCTS = mcts.result$policy.vector # Politica Pi
   
-  
-  # Normalizar despues de la penalizacion
-  if (sum(P.MCTS) > 0) { # Si la suma es positiva
-    P.MCTS = P.MCTS / sum(P.MCTS) # Normalizar
-  } else { # Si la suma es cero
-    P.MCTS = setNames(rep(1/length(moves.list), length(moves.list)), moves.list) # Elegir al azar
+  # --- VALIDACION DE ROBUSTEZ (Común para todos los casos) ---
+  # Si la política Pi es inválida (NA o suma cero), elige un movimiento al azar
+  if (is.na(sum(P.MCTS)) || sum(P.MCTS) == 0) {
+    warning("P.MCTS es invalida (NA/Suma Cero) en la raiz. Seleccionando movimiento aleatorio.")
+    return(sample(moves.list, size = 1))
   }
   
-  # Aplicar Temperatura
-  temperature = 0.01 # Temperatura baja para determinismo
-  best.move = names(which.max(P.MCTS)) # Selecciona el movimiento mas probable para explotacion
+  if (high.temp) {
+    # MODO EXPLORACION (Muestreo con temperatura T=1.0)
+    temperature = 1.0 
+    P.exp = P.MCTS ^ (1/temperature) 
+    sum.P.exp = sum(P.exp)
+    
+    if (is.na(sum.P.exp) || sum.P.exp == 0) {
+      # Fallo en el cálculo P.temp, usar aleatorio de seguridad
+      warning("Fallo al calcular P.temp (NA/Suma Cero). Seleccionando movimiento aleatorio.")
+      best.move = sample(moves.list, size = 1) 
+    } else {
+      P.temp = P.exp / sum.P.exp # Normalizar
+      best.move = sample(names(P.temp), size = 1, prob = P.temp) # Muestreo estocástico
+    }
+    
+  } else {
+    # MODO EXPLOTACION (Determinista)
+    
+    # 🚨 VERIFICACION DE SEGURIDAD EN EXPLOTACION:
+    max_index = which.max(P.MCTS) # Encontrar el índice del movimiento con más probabilidad (visitas)
+    
+    if (length(max_index) == 0 || is.na(max_index)) {
+      # Si which.max falla, usar aleatorio de seguridad
+      warning("Fallo al encontrar el movimiento maximo (which.max). Seleccionando movimiento aleatorio.")
+      best.move = sample(moves.list, size = 1)
+    } else {
+      best.move = names(max_index) # Convertir índice a nombre del movimiento
+    }
+  }
   
   return(best.move)
 }
 
 # Funcion para obtener el elo
 elo.update.pair = function(rating.A, rating.B, score.A, k = 20) {
+  # Actualiza el rating ELO del jugador A contra un oponente B (rating fijo)
+  # Score A: 1 (gana), 0 (pierde), 0.5 (empate)
+  
   # Calcula la puntuación esperada (E_A) para el jugador A
   expected.A = 1 / (1 + 10 ^ ((rating.B - rating.A) / 400))
   
@@ -170,12 +279,14 @@ elo.update.pair = function(rating.A, rating.B, score.A, k = 20) {
 
 elo.function = function(df, k = 20) {
   
+  # Funcion para calcular el ELO del bot basado en sus resultados
+  
   # Comprobacion de datos vacios o faltantes
   if (nrow(df) == 0 || !"Resultado" %in% names(df)) {
     cat("Advertencia: Data frame vacio o falta la columna 'Resultado'. Devolviendo ELO inicial (400).\n")
     return(400)
   }
-  # Fijo en 400, sin importar el nombre del oponente
+  # Fijo en 400, sin importar el nombre del oponente (Oponente base o ELO fijo)
   rB = 400
   
   # Vector para almacenar el ELO calculado en cada paso
@@ -186,14 +297,12 @@ elo.function = function(df, k = 20) {
     
     # ELO anterior (rA)
     if (i == 1) {
-      # Primera partida: ELO de partida es 400
-      rA = 400
+      rA = 400 # ELO de partida es 400 (base)
     } else {
-      
-      rA = calculated.elos[i - 1]
+      rA = calculated.elos[i - 1] # ELO de la partida anterior
     }
     
-    res = df$Resultado[i]
+    res = df$Resultado[i] # Resultado ( "1-0")
     
     # Si el resultado no es valido o está incompleto, mantenemos el ELO anterior
     if (is.na(res) || res == "" || !res %in% c("1-0", "0-1", "1/2-1/2")) {
@@ -201,9 +310,9 @@ elo.function = function(df, k = 20) {
       next
     }
     
-    score.A = if (res == "1-0") 1 else if (res == "0-1") 0 else 0.5
+    score.A = if (res == "1-0") 1 else if (res == "0-1") 0 else 0.5 # Convertir resultado a puntaje
     
-    new.elo = elo.update.pair(rA, rB, score.A, k = k)
+    new.elo = elo.update.pair(rA, rB, score.A, k = k) # Actualizar ELO
     calculated.elos[i] = new.elo
     
     # Si la columna 'Elo' existe en el df, actualizamos la columna también
@@ -212,11 +321,130 @@ elo.function = function(df, k = 20) {
     }
   }
   
-  # 4. Devolver SOLO el último ELO calculado
   return(calculated.elos[nrow(df)])
 }
 
-# Funciona para auto entrenamiento
+# Funcion para auto entrenamiento
+bot.vs.bot.game = function(model ,games.data, games.heavy.data){
+  history.positions = character() # Historial de posiciones FEN
+  max.jugadas = 240 # Limite de jugadas para evitar bucles infinitos
+  game = game() # Partida nueva (estado inicial)
+  num.moves = 0 # Contador de movimientos
+  moves = character() # Lista de movimientos jugados
+  move.times = numeric() # Tiempos de cálculo por movimiento
+  MCTS.policies = list() # (Variable no usada en esta versión, eliminar si es redundante)
+  
+  while (!is_game_over(game) && num.moves < max.jugadas) { # Bucle principal de la partida
+    
+    current.fen = fen(game) # FEN actual
+    history.positions = c(history.positions, current.fen) # Anadir a historial para la regla de repetición
+    num.moves = num.moves + 1 # Aumentar contador
+    
+    start.time = Sys.time() # Registrar tiempo inicial de MCTS
+    
+    move = best.move(game, model, move.count = num.moves) # Llamada a best.move (incluye MCTS, ruido y temp)
+    
+    end.time = Sys.time() # Registrar tiempo final de MCTS
+    move.times[num.moves] = as.numeric(difftime(end.time, start.time, units = "secs")) # Tiempo de movimiento
+    
+    if (is.null(move)) { cat("Salida por movimientos nulos"); break } # Control de nulo (Partida terminada por Ahogado/Jaque Mate no detectado antes de llamar a best.move)
+    cat("\nMovimiento: ", move, " numero ", num.moves, "\n") # Imprimir movimiento
+    
+    game = move(game, move) # Realizar movimiento
+    moves[num.moves] = move # Guardar movimiento
+    # print.chess.board(game) # Deshabilitado para partidas rapidas
+    
+  }
+  
+  final.result.value = get.game.result.value(game) # Obtener el resultado final (1, 0, -1)
+  
+  moves = moves[1:num.moves] # Recortar movimientos a la longitud real de la partida
+  move.times.median = median(move.times) # Mediana de tiempos de cálculo
+  
+  # Determinar el color del jugador que NO movió último (es decir, el color al que le tocaría mover si el juego continuara)
+  last.player.color = if (turn(game) == "white") "black" else "white"
+  # Guardar datos pesados (heavy data) para el entrenamiento de la NN (incluye FENs y resultados)
+  games.heavy.data = df.heavy.game.data(games.heavy.data, game, "bot_vs_bot_interno", moves, num.moves, move.times.median, last.player.color, history.positions = history.positions, final.result = final.result.value) 
+  # Guardar datos ligeros (light data) para el monitoreo general
+  games.data = df.game.data(games.data, game, "bot_vs_bot_interno", num.moves, "Hatchet1", "Hatchet1") 
+  
+  # print(games.data)
+  # print(games.heavy.data) 
+  
+  return(list(
+    games.data = games.data, # Retornar datos ligeros
+    games.heavy.data = games.heavy.data # Retornar datos pesados
+  ))
+}
+
+# Funcion para jugar con la ia (Bot vs Humano)
+bot.vs.player.game = function(model, games.data, games.heavy.data){
+  max.jugadas = 200
+  game = game()
+  mov = 0
+  moves = character()
+  
+  # Eleccion de color por el jugador humano
+  repeat {
+    color = tolower(readline("Desea jugar como blancas o negras : "))
+    if (color %in% c("blancas", "negras")) break
+    cat("Escriba 'blancas' o 'negras'\n")
+  }
+  
+  jugador.blancas = (color == "blancas") # TRUE si el jugador humano es blanco
+  
+  while (!is_game_over(game) && mov < max.jugadas) {
+    print.chess.board(game) # Mostrar el tablero
+    
+    turno.blancas = (turn(game) == "white") # TRUE si es turno de las blancas
+    
+    if (turno.blancas == jugador.blancas) { # Turno del jugador humano
+      moves.list = moves(game)
+      cat("Movimientos posibles: ", paste(moves.list, collapse = ", "), "\n")
+      
+      repeat {
+        move = readline("Su movimiento (e2e4): ")
+        if (move %in% moves.list) break # Validar movimiento
+        cat("Solo movimientos legales\n")
+      }
+      
+      game = move(game, move)
+    } else { # Turno de la IA
+      cat("\nTurno de la IA\n")
+      
+      move = best.move(game, model) # La IA elige el mejor movimiento (MCTS en modo Explotación)
+      
+      if (is.null(move)) {
+        cat("IA sin movimiento valido, fin de partida\n")
+        break
+      }
+      
+      cat("IA juega: ", move, "\n")
+      game = move(game, move)
+    }
+    
+    mov = mov + 1
+    moves[mov] = move
+  }
+  
+  # Recortar moves y move.times al tamaño real
+  moves = moves[1:mov]
+  move.times = 0 # Contador simple (no se usa tiempo de MCTS aquí)
+  
+  # Guardar resultados de la partida Bot vs Humano
+  games.heavy.data = df.heavy.game.data(games.heavy.data, game, "bot_vs_bot_interno", moves, mov, move.times, "white", history.positions = history.positions, final.result = get.game.result.value(game))
+  games.data = df.game.data(games.data, game, "bot_vs_bot_interno", mov, "Hatchet1", "Hatchet1")
+  
+  # Control de datos, eliminar en entrega
+  print(games.data)
+  
+  return(list(
+    games.data = games.data,
+    games.heavy.data = games.heavy.data
+  ))
+}
+
+# Funcion para auto entrenamiento
 bot.vs.bot.game = function(model ,games.data, games.heavy.data){
   history.positions = character() # Historial de posiciones FEN
   max.jugadas = 240 # Limite de jugadas
@@ -229,36 +457,12 @@ bot.vs.bot.game = function(model ,games.data, games.heavy.data){
   while (!is_game_over(game) && num.moves < max.jugadas) { # Bucle principal de la partida
     
     current.fen = fen(game) # FEN actual
-    history.positions = c(history.positions, current.fen) # Añadir a historial
+    history.positions = c(history.positions, current.fen) # Anadir a historial
     num.moves = num.moves + 1 # Aumentar contador
     
     start.time = Sys.time() # Registrar tiempo
     
-    # Ejecutar MCTS
-    noise.enabled = (num.moves < 30) # Ruido en las primeras 30
-    mcts.data = run.mcts(game, model, apply.noise = noise.enabled) # Ejecutar MCTS con ruido si es necesario
-    P.MCTS = mcts.data$policy.vector # Obtener vector Pi
-    
-    
-    # Normalizar P.MCTS
-    # Si la suma es 0, es un caso extremo y se elige al azar
-    moves.list = moves(game)
-    if (sum(P.MCTS) > 0) {
-      P.MCTS = P.MCTS / sum(P.MCTS) # Normalizar para que sume 1
-    } else {
-      P.MCTS = setNames(rep(1/length(moves.list), length(moves.list)), moves.list) # Elegir al azar
-    }
-    MCTS.policies[[num.moves]] = P.MCTS # GUARDAR EL VECTOR PI CORREGIDO
-    
-    # Aplicar Temperatura
-    temperature = if (num.moves < 15) 1.0 else 0.01 # Temperatura alta para exploracion, baja para explotacion
-    
-    if (temperature > 0.1) { # Muestreo estocastico
-      P.MCTS.T = (P.MCTS ^ (1/temperature)) / sum(P.MCTS ^ (1/temperature)) # Aplicar temperatura
-      move = sample(names(P.MCTS.T), size = 1, prob = P.MCTS.T) # Muestrear movimiento basado en probabilidades
-    } else { # Modo determinista
-      move = names(which.max(P.MCTS)) # Selecciona el movimiento con la probabilidad mas alta
-    }
+    move = best.move(game, model, move.count = num.moves) # Llamada a best.move (incluye MCTS, ruido y temp)
     
     end.time = Sys.time() # Registrar tiempo final
     move.times[num.moves] = as.numeric(difftime(end.time, start.time, units = "secs")) # Tiempo de movimiento
@@ -269,22 +473,20 @@ bot.vs.bot.game = function(model ,games.data, games.heavy.data){
     game = move(game, move) # Realizar movimiento
     moves[num.moves] = move # Guardar movimiento
     print.chess.board(game) # Deshabilitado para partidas rapidas
+    
   }
   
   final.result.value = get.game.result.value(game)
   
-  # Recortar moves y move.times al tamaño real
   moves = moves[1:num.moves] # Recortar movimientos
   move.times.median = median(move.times) # Mediana de tiempos
   
-  # Guardar datos pesados. Se usa turn(game) para determinar quien era el jugador en la ultima posicion.
-  last.player.color = if (turn(game) == "white") "black" else "white" # <--- CONFLICTO RESUELTO
-  # elo.result = elo.function(games.heavy.data, k = 20) # <--- LÍNEA REMOVIDA/COMENTADA EN LA FUSIÓN
+  last.player.color = if (turn(game) == "white") "black" else "white"
   games.heavy.data = df.heavy.game.data(games.heavy.data, game, "bot_vs_bot_interno", moves, num.moves, move.times.median, last.player.color, history.positions = history.positions, final.result = final.result.value) # Guardar datos pesados para el entrenamiento
   games.data = df.game.data(games.data, game, "bot_vs_bot_interno", num.moves, "Hatchet1", "Hatchet1") # Guardar datos ligeros
   
-  # print(games.data) # Deshabilitar en produccion
-  # print(games.heavy.data) # Deshabilitar en produccion
+  # print(games.data)
+  # print(games.heavy.data) 
   
   return(list(
     games.data = games.data, # Retornar datos ligeros

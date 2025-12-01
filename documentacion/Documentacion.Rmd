@@ -1,0 +1,156 @@
+---
+output:
+  pdf_document:
+    latex_engine: xelatex
+    keep_tex: yes
+    template: null
+header-includes:
+  - \usepackage[margin=1in, columnsep=0.2in]{geometry}
+  - \usepackage{times}
+  - \usepackage{amsmath,amssymb,amsfonts}
+  - \usepackage{graphicx,float}
+  - \usepackage{caption}
+  - \usepackage{parskip}
+  - \setlength{\parindent}{15pt}
+  - \usepackage{multicol}
+  - \usepackage{sectsty}
+  - \usepackage{lmodern}
+  - \allsectionsfont{\centering \scshape}
+  - \captionsetup[figure]{font=small,labelfont=bf}
+fontsize: 10pt
+mainfont: Times New Roman
+---
+
+\begin{center}
+{\huge
+\textbf{Implementación y Evaluación de un Agente de Ajedrez AlphaZero-like mediante MCTS y Redes Convolucionales en R}
+}
+
+\vspace{0.5cm}
+\large
+
+\textbf{Anthonny Flores} (y otros co-autores si aplica)\\
+Escuela de Matemáticas\\
+Universidad de Costa Rica\\ 
+San José, Costa Rica\\
+Email: \textit{tu.correo.electronico@ejemplo.com}\\
+\end{center}
+
+\vspace{1cm}
+\normalsize
+
+\begin{multicols}{2}
+
+\textbf{Abstracto}
+
+El presente trabajo describe la implementación de un agente de inteligencia artificial para el juego de ajedrez, siguiendo la arquitectura seminal de **AlphaZero (Zero-like)**. La metodología se centra en el algoritmo de búsqueda **Monte Carlo Tree Search (MCTS)** guiado por una **Red Neuronal Profunda (NN)** que predice tanto la política ($\mathbf{P}$) como el valor ($\mathbf{V}$) de la posición. Se detalla la estructura del *tensor* de entrada ($8 \times 8 \times 18$) para la codificación FEN. El entrenamiento se realiza a través de un proceso de **Self-Play** (Auto-entrenamiento), donde el agente se enfrenta a sí mismo para generar datos de alta calidad. La evaluación se centra en la estabilidad de las simulaciones MCTS, la eficacia de las funciones de valor y política, y la capacidad de rendimiento del agente contra una IA externa (**Stockfish**). Finalmente, se reportan métricas clave de desempeño y tiempo de ejecución.
+
+---
+
+\section*{I. Motivación.}
+
+El ajedrez ha servido históricamente como un campo de pruebas crucial para la inteligencia artificial. Desde los sistemas basados en la búsqueda heurística de fuerza bruta, como **Deep Blue**, hasta el enfoque basado en el aprendizaje por refuerzo profundo de **AlphaZero**, la evolución en este dominio es notable.
+
+La implementación de agentes de ajedrez Zero-like se motiva por tres puntos principales:
+
+1.  \textbf{Exploración de MCTS Dirigido por NN:} Superar las limitaciones de la búsqueda de fuerza bruta tradicional mediante un algoritmo de \textbf{Monte Carlo Tree Search (MCTS)}. MCTS utiliza la exploración ($U$) y la explotación ($Q$) de la fórmula **UCT/PUCT** para centrar eficientemente la búsqueda, siendo dirigido por las predicciones de la Red Neuronal [1], [2]. 
+2.  \textbf{Aprendizaje por Refuerzo Profundo (DRL):} El modelo aprende de la experiencia sin conocimiento humano previo (*tabula rasa*), utilizando partidas de **Auto-entrenamiento** para mejorar iterativamente la política y la función de valor.
+3.  \textbf{Análisis de Rendimiento en R:} Evaluar la viabilidad y el rendimiento de implementar algoritmos intensivos computacionalmente, como MCTS y la manipulación de tensores, utilizando el entorno **R**.
+
+El proyecto busca implementar estos componentes clave para construir un agente capaz y analizar las métricas internas de su proceso de toma de decisiones.
+
+---
+
+\section*{II. Metodología.}
+\subsection*{A. Arquitectura del Agente}
+
+El agente implementado replica la estructura central de AlphaZero: un bucle iterativo de **MCTS** y una **Red Neuronal** (NN) que se entrenan mutuamente.
+
+\begin{enumerate}
+    \item \textbf{Red Neuronal (NN):} Es el componente central entrenable. Toma la representación de la posición del tablero y produce dos salidas:
+    \begin{itemize}
+        \item \textbf{Política ($\mathbf{P}$):} Un vector de probabilidades sobre todos los movimientos legales posibles.
+        \item \textbf{Valor ($\mathbf{V}$):} Un escalar que estima la probabilidad de que el jugador actual gane, variando entre $[-1, 1]$.
+    \end{itemize}
+    \item \textbf{MCTS:} Utiliza la Política ($\mathbf{P}$) como *prior* para la exploración y el Valor ($\mathbf{V}$) para respaldar las simulaciones, optimizando el coeficiente **C.PUCT** (Coeficiente de Exploración) en la fórmula de selección UCB.
+\end{enumerate}
+
+\subsection*{B. Codificación del Estado (FEN a Tensor)}
+
+El estado del tablero se codifica a partir de la notación FEN en un *tensor* de entrada. La función \texttt{fen.to.vector} transforma el estado en una matriz de $8 \times 8 \times 18$.
+
+\begin{itemize}
+    \item \textbf{Planos 1-12:} Representación One-Hot de las 6 piezas (P, N, B, R, Q, K) para ambos colores, en una cuadrícula $8 \times 8$.
+    \item \textbf{Planos 13-18:} Información auxiliar: Turno del jugador (13), Opciones de enroque (14), Repeticiones (15), Capa constante (16), Reloj de medio movimiento (17), y Número de movimiento completo (18).
+\end{itemize}
+
+
+\subsection*{C. Entrenamiento por Auto-Juego (Self-Play)}
+
+El entrenamiento se realiza generando una gran cantidad de partidas donde el agente juega contra su propia versión más reciente (\texttt{bot.vs.bot.game}). Los hiperparámetros clave son:
+
+\begin{itemize}
+    \item \textbf{Simulaciones MCTS (\texttt{NUM.SIMULATIONS}):} Determina la profundidad y calidad de la búsqueda en cada movimiento ($3200$ simulaciones).
+    \item \textbf{Ruido de Dirichlet:} Se aplica a la política ($\mathbf{P}$) en los primeros movimientos (\texttt{num.moves < 30}) para fomentar la exploración.
+    \item \textbf{Temperatura:} Se utiliza una temperatura alta (\texttt{temperature = 1.0}) en las jugadas iniciales (\texttt{num.moves < 15}) para promover la diversidad, y una baja (\texttt{0.01}) en las finales para forzar la explotación del mejor movimiento.
+\end{itemize}
+Los datos generados incluyen el FEN, el vector $\mathbf{P}_{\text{MCTS}}$ (la política objetivo), y el valor final del juego ($Z$) como etiquetas de entrenamiento.
+
+\subsection*{D. Métricas de Evaluación}
+
+La evaluación del agente se enfoca en dos aspectos: la calidad del MCTS y el rendimiento externo.
+
+\subsubsection*{1. Métricas de MCTS Internas}
+
+\begin{itemize}
+    \item \textbf{Valor Q(s,a) (Esperanza de Victoria):} Se monitorea la diferencia entre el valor $\mathbf{V}_{\text{model}}$ (predicho por la NN) y el valor $Q(s,a)$ promedio (resultado de las simulaciones MCTS).
+    \item \textbf{Entropía de la Política ($\mathbf{P}_{\text{MCTS}}$):} Mide la dispersión de probabilidades entre los movimientos legales.
+    \item \textbf{Tiempos de Ejecución:} Se miden los tiempos de \texttt{run.mcts} para evaluar la eficiencia computacional de R en el bucle de simulación.
+\end{itemize}
+
+\subsubsection*{2. Evaluación Externa}
+
+\begin{itemize}
+    \item \textbf{ELO:} Se utiliza la función \texttt{elo.function} para calcular el ELO del agente.
+    \item \textbf{Partidas contra Stockfish:} El agente se enfrenta a un motor de ajedrez de referencia (\texttt{bot.vs.external.game}) para obtener una evaluación objetiva de su fuerza de juego.
+\end{itemize}
+
+---
+\section*{III. Resultados}
+
+\subsection*{A. Desempeño del Auto-Entrenamiento (Self-Play)}
+[Espacio para describir la evolución del ELO y la estabilidad del Valor (V) y la Política (P) a lo largo de las épocas de entrenamiento.]
+
+\subsection*{B. Comparación MCTS vs. Stockfish}
+[Espacio para presentar los resultados de las partidas contra Stockfish, incluyendo el porcentaje de victorias, derrotas y empates, y el ELO final estimado.]
+
+\subsection*{C. Análisis de Eficiencia (Tiempos de Ejecución)}
+[Espacio para reportar el tiempo promedio de \texttt{run.mcts} y la mediana del tiempo por jugada, comparando con el tiempo de respuesta de Stockfish (si aplica).]
+
+---
+\section*{IV. Discusión}
+
+\subsection*{A. Estabilidad y Convergencia}
+[Espacio para discutir si el modelo converge a una estrategia de juego estable, o si la política se mantiene demasiado exploratoria.]
+
+\subsection*{B. Limitaciones del Entorno R}
+[Espacio para analizar el impacto de la naturaleza interpretada de R en los tiempos de MCTS y la manipulación de grandes tensores/datos.]
+
+\subsection*{C. Estrategias Observadas}
+[Espacio para describir el estilo de juego del agente (agresivo, posicional) y las aperturas o finales que domina o ignora.]
+
+---
+\section*{V. Conclusiones}
+
+[Espacio para resumir los hallazgos más importantes sobre el éxito de la implementación AlphaZero en R y las principales fortalezas/debilidades del agente Hatchet1.]
+
+---
+\section*{Referencias}
+
+[1] Silver, D., Schrittwieser, J., Simonyan, K., et al. (2017). \textbf{Mastering the game of Go without human knowledge}. *Nature*, 550(7676), 354–359.
+
+[2] Browne, C. B., Powley, E., Whitehouse, D., et al. (2012). \textbf{A Survey of Monte Carlo Tree Search Methods}. *IEEE Transactions on Computational Intelligence and AI in Games*, 4(1), 1–43.
+
+[3] ... (Añadir referencias a la librería de ajedrez en R, TensorFlow/Keras si se usa, o literatura sobre codificación FEN.)
+
+\end{multicols}

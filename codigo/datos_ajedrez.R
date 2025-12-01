@@ -39,8 +39,7 @@ df.game.data <- function(df, game, mode, num.moves, model.name = "Hatchet1", oth
 }
 
 # Funcion para guardar datos secundarios de las partidas
-# MODIFICADA: Se agregó el argumento 'final.result' y se usa para la columna 'Resultado_Num'.
-df.heavy.game.data <- function (df, game, mode, moves, num.moves, move.times = 0, color, model.name = "Hatchet1", other.model.name = "Hatchet1", history.positions = "", final.result = NA){
+df.heavy.game.data <- function (df, game, mode, moves, num.moves, move.times = 0, color, model.name = "Hatchet1", other.model.name = "Hatchet1", elo = 400, history.positions = "", final.result = NA){
   
   # Data principal
   df.copy = data.frame(
@@ -48,9 +47,9 @@ df.heavy.game.data <- function (df, game, mode, moves, num.moves, move.times = 0
     Modelo = model.name,
     Modelo_contrario = other.model.name,
     Color = color,
-    Resultado_Num = final.result, 
+    Resultado = final.result, 
     Finalizado = is_game_over(game),
-    # Elo = elo.function(moves, color,.Resultado..), # Esto hay que hacerlo para la proxima entrega
+    Elo = elo,
     Jaque = is_check(game),
     Mate = is_checkmate(game),
     Numero_de_movimientos = num.moves,
@@ -86,7 +85,7 @@ data.manege <- function(games.data, games.heavy.data){
       if (is.numeric(option)){
         if(as.numeric(option) == option && 0 < option && option < 5 ) break
       }
-      option = as.numeric(readline("Por favor digite e imprima solo una de las opciones dadas"))
+      option = as.numeric(readline("Por favor digite e imprima solo una de las opciones dadas: "))
     }
     
     if (option == 1) {

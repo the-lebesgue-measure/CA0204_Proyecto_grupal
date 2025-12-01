@@ -29,11 +29,11 @@ generate.model <- function(num.residual.blocks = 20, conv.filters = 256) { # Mod
   num.policy.units = 4672
   
   # Definir modelo
-  inputs = layer_input(shape = c(8, 8, 16))
+  inputs = layer_input(shape = c(8, 8, 18))
   
   # Capa Inicial
   x = inputs |>
-    layer_conv_2d(filters = conv.filters, kernel_size = c(3, 3), padding = "same", use_bias = FALSE) |>
+    layer_conv_2d(filters = conv.filters, kernel_size = c(3, 3), padding = "same", use_bias = FALSE, kernel_regularizer = regularizer_l2(0.0001)) |>
     layer_batch_normalization() |>
     layer_activation(activation = "relu")
   
@@ -45,21 +45,24 @@ generate.model <- function(num.residual.blocks = 20, conv.filters = 256) { # Mod
   # Cabeza de valor
   value.head = x |>
     # Capa de Compresion
-    layer_conv_2d(filters = 1, kernel_size = c(1, 1), use_bias = FALSE) |>
+    layer_conv_2d(filters = 32, kernel_size = c(1, 1), use_bias = FALSE) |>
     layer_batch_normalization() |>
     layer_activation(activation = "relu") |>
     layer_flatten() |>
     
     # Capa Densa Final
-    layer_dense(units = 256, activation = "relu", kernel_regularizer = regularizer_l2(0.0001)) |> #* Capa densa intermedia
+    layer_dense(units = 128, activation = "relu", kernel_regularizer = regularizer_l2(0.0001)) |> #* Capa densa intermedia
     layer_dense(units = 1, activation = "tanh", name = "value")
   
   # Cabeza de politica
   policy.head = x |>
-    # Capa de Compresion
-    layer_conv_2d(filters = 2, kernel_size = c(1, 1), use_bias = FALSE) |>
+    # Capa de Compresion 1 (Aumentada)
+    layer_conv_2d(filters = conv.filters, kernel_size = c(3, 3), padding = "same", use_bias = FALSE) |>
     layer_batch_normalization() |>
     layer_activation(activation = "relu") |>
+    
+    # Capa de Compresion 2 (Ajustada a 73)
+    layer_conv_2d(filters = 73, kernel_size = c(1, 1), use_bias = FALSE) |> 
     layer_flatten() |>
     
     # Capa Densa Final
@@ -79,14 +82,14 @@ generate.model <- function(num.residual.blocks = 20, conv.filters = 256) { # Mod
 
 # Funcion para guardar el modelo
 save.model <- function(model) {
-  filepath <- "../resultados/Modelos/modelo_ajedrez_hatchett1.keras" # Ruta de archivo
+  filepath = "../resultados/Modelos/modelo_ajedrez_hatchett1.keras" # Ruta de archivo
   save_model(model, filepath = filepath, overwrite = TRUE) # Guardar modelo
   cat("Modelo guardado correctamente en: ", normalizePath(filepath), "\n") # Confirmacion
 }
 
 # Funcion para cargar el modelo
 call.model <- function() {
-  filepath <- "../resultados/Modelos/modelo_ajedrez_hatchett1.keras" # Ruta de archivo
+  filepath = "../resultados/Modelos/modelo_ajedrez_hatchett1.keras" # Ruta de archivo
   if (!file.exists(filepath)) { # Si no existe
     return(generate.model()) # Generar modelo nuevo
   }

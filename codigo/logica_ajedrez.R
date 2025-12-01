@@ -17,7 +17,7 @@ source("utils.R")
 
 mcts.tree = new.env() # Entorno (hash map/diccionario) global para almacenar y acceder a las estadisticas de los nodos del arbol MCTS.
 C.PUCT = 2.0 # Coeficiente de exploracion MCTS (controla el equilibrio exploracion/explotacion en PUCT)
-NUM.SIMULATIONS = 100 # Numero de simulaciones MCTS por movimiento
+NUM.SIMULATIONS = 20 # Numero de simulaciones MCTS por movimiento
 
 # Constante renombrada a safety.threshold
 safety.threshold = 1e-4 # Umbral de seguridad: 0.0001
@@ -34,7 +34,7 @@ calculate.ucb = function(Q, P, N.sum, N.current, C.puct = C.PUCT) {
 }
 
 # Funcion para aplicar Ruido de Dirichlet
-apply.dirichlet.noise = function(policy.vector, alpha = 0.3, epsilon = 0.25) {
+apply.dirichlet.noise = function(policy.vector, alpha = 0.3, epsilon = 0.5) {
   # Genera ruido de Dirichlet para promover la exploracion de movimientos en la raiz
   noise = rgamma(length(policy.vector), shape = alpha, rate = 1)
   noise = noise / sum(noise) # Normalizar el ruido
@@ -53,9 +53,6 @@ get.game.result.value = function(game) {
   }
   return(NA) # Si el juego no termina devuelve NA
 }
-
-# Funcion para convertir FEN a tensor (Input para la Red Neuronal)
-# ... (fen.to.vector no se incluye por brevedad, asumiendo que esta definida) ...
 
 # Funcion para obtener o inicializar un nodo en el arbol MCTS
 get.node.stats = function(fen.key, legal.moves, P.model = NULL) {
@@ -259,13 +256,11 @@ best.move = function(game, model, move.count = 0) {
   
   # Logica de exploracion/explotacion
   noise.enabled = (move.count < 30) # Ruido para auto-entrenamiento
-  high.temp = (move.count < 15) # Temperatura alta para exploracion inicial
+  high.temp = (move.count < 40) # Temperatura alta para exploracion inicial
   
   mcts.result = run.mcts(game, model, apply.noise = noise.enabled) 
   P.MCTS = mcts.result$policy.vector # Politica Pi
-  print(P.MCTS)
   
-  # --- VALIDACION DE ROBUSTEZ (Comun para todos los casos) ---
   # Si la politica Pi es invalida (NA o suma cero), elige un movimiento al azar
   if (is.na(sum(P.MCTS)) || sum(P.MCTS) == 0) {
     cat("P.MCTS es invalida (NA/Suma Cero) en la raiz. Seleccionando movimiento aleatorio.\n")
@@ -410,7 +405,7 @@ bot.vs.bot.game = function(model ,games.data, games.heavy.data){
   # Guardar datos ligeros (light data) para el monitoreo general
   games.data = df.game.data(games.data, game, "bot_vs_bot_interno", num.moves, "Hatchet1", "Hatchet1") 
   
-  # print(games.data)
+  print(games.data)
   # print(games.heavy.data) 
   
   return(list(

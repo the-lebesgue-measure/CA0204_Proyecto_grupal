@@ -154,6 +154,11 @@ run.mcts = function(game, model, num.simulations = NUM.SIMULATIONS, apply.noise 
     # Determinacion del valor final (Z)
     if (is_game_over(current.game)) {
       Z = get.game.result.value(current.game) # Valor del final de partida (1, 0, -1)
+      if (is_stalemate(current.game) || 
+          is_seventyfive_moves(current.game) || 
+          is_fivefold_repetition(current.game)) {
+        Z = -0.5
+      }
     } else {
       Z = V.model # Valor V de la ultima expansion
     }

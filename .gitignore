@@ -1,3 +1,4 @@
 # Ignorar archivos de R
 .RData
 .Rhistory
+resultados/

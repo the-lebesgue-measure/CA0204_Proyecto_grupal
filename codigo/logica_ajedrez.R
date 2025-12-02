@@ -102,6 +102,8 @@ run.mcts = function(game, model, num.simulations = NUM.SIMULATIONS, apply.noise 
     P.model = rep(1 / length(legal.moves), length(legal.moves))
   }
   
+  # P.model es la politica NN LIMPIA y PARCHEADA
+  
   root.stats = get.node.stats(root.fen, legal.moves, P.model) # Inicializar el nodo raiz
   
   if (apply.noise) {
@@ -186,7 +188,7 @@ run.mcts = function(game, model, num.simulations = NUM.SIMULATIONS, apply.noise 
     P.MCTS.final = setNames(rep(1 / length(final.visits), length(final.visits)), names(final.visits))
     best.action.name = names(which.max(P.MCTS.final))
     Q.best.move = 0
-    cat("ADVERTENCIA: Total de visitas MCTS CERO. P.MCTS es UNIFORME para la seleccion.\n")
+    # cat("ADVERTENCIA: Total de visitas MCTS CERO. P.MCTS es UNIFORME para la seleccion.\n")
   } else {
     # Calculo normal de Pi (politica objetivo)
     P.MCTS.final = final.visits / total.visits
@@ -198,7 +200,8 @@ run.mcts = function(game, model, num.simulations = NUM.SIMULATIONS, apply.noise 
   return(list(
     best.move = best.action.name,
     policy.vector = P.MCTS.final,
-    value = Q.best.move
+    value = Q.best.move,
+    P.model.clean = P.model # <--- AÑADIDO: Política NN limpia como fallback
   ))
 }
 
@@ -254,7 +257,7 @@ fen.to.vector = function(fen, num.repetitions = 0) {
   array_reshape(matrixx, c(1, 8, 8, 18)) # Reajusta para que sea un tensor de lote (Batch) para la prediccion del modelo
 }
 
-# Funcion para elegir el mejor movimiento (ACTUALIZADA con controles de robustez)
+# Funcion para elegir el mejor movimiento (ACTUALIZADA con controles de robustez y fallback a NN)
 best.move = function(game, model, move.count = 0) {
   moves.list = moves(game) # La lista de movimientos legales originales
   if (length(moves.list) == 0) return(NULL) # Si no hay movimientos, retornar NULL (partida terminada)
@@ -265,11 +268,13 @@ best.move = function(game, model, move.count = 0) {
   
   mcts.result = run.mcts(game, model, apply.noise = noise.enabled) 
   P.MCTS = mcts.result$policy.vector # Politica Pi
+  P.model.clean = mcts.result$P.model.clean # Política NN Limpia (Fallback)
   
-  # Si la politica Pi es invalida (NA o suma cero), elige un movimiento al azar
+  # Si la politica Pi es invalida (NA o suma cero), usa el FALLBACK A NN para la selección
   if (is.na(sum(P.MCTS)) || sum(P.MCTS) == 0) {
-    cat("P.MCTS es invalida (NA/Suma Cero) en la raiz. Seleccionando movimiento aleatorio.\n")
-    return(sample(moves.list, size = 1))
+    # cat("P.MCTS es invalida (NA/Suma Cero) en la raiz. Usando FALLBACK a NN.\n")
+    # Usar P.model.clean para seleccionar el movimiento con mayor probabilidad
+    return(names(which.max(P.model.clean))) 
   }
   
   if (high.temp) {
@@ -279,9 +284,10 @@ best.move = function(game, model, move.count = 0) {
     sum.P.exp = sum(P.exp)
     
     if (is.na(sum.P.exp) || sum.P.exp == 0) {
-      # Fallo en el calculo P.temp, usar aleatorio de seguridad
-      cat("Fallo al calcular P.temp (NA/Suma Cero). Seleccionando movimiento aleatorio.\n")
-      best.move = sample(moves.list, size = 1) 
+      # FALLBACK CORREGIDO: Si el cálculo P.temp falla, usa la política NN para muestrear
+      # cat("Fallo al calcular P.temp (NA/Suma Cero). Usando FALLBACK a la NN para muestreo.\n")
+      # Usa la política NN limpia como probabilidades para el muestreo estocástico
+      best.move = sample(names(P.model.clean), size = 1, prob = P.model.clean) 
     } else {
       P.temp = P.exp / sum.P.exp # Normalizar
       best.move = sample(names(P.temp), size = 1, prob = P.temp) # Muestreo estocastico
@@ -289,13 +295,13 @@ best.move = function(game, model, move.count = 0) {
     
   } else {
     
-    # VERIFICACION DE SEGURIDAD EN EXPLOTACION
+    # MODO EXPLOTACION
     max_index = which.max(P.MCTS) # Encontrar el indice del movimiento con mas probabilidad (visitas)
     
     if (length(max_index) == 0 || is.na(max_index)) {
-      # Si which.max falla, usar aleatorio de seguridad
-      cat("Fallo al encontrar el movimiento maximo (which.max). Seleccionando movimiento aleatorio.\n")
-      best.move = sample(moves.list, size = 1)
+      # FALLBACK: Si which.max falla, usar la NN
+      # cat("Fallo al encontrar el movimiento maximo (which.max). Usando FALLBACK a la NN.\n")
+      best.move = names(which.max(P.model.clean))
     } else {
       best.move = names(max_index) # Convertir indice a nombre del movimiento
     }

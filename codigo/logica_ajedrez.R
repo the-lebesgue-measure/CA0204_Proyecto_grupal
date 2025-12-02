@@ -358,7 +358,7 @@ elo.function = function(df, k = 20) {
       next
     }
     
-    score.A = if (res == "1-0") 1 else if (res == "0-1") 0 else 0.5 # Convertir resultado a puntaje
+    score.A = if (res == "1-0") 1 else if (res == "0-1") -1 else 0 # Convertir resultado a puntaje
     
     new.elo = elo.update.pair(rA, rB, score.A, k = k) # Actualizar ELO
     calculated.elos[i] = new.elo

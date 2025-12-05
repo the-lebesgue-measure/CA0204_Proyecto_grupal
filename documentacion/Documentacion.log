@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999997 (MiKTeX 25.4) (preloaded format=xelatex 2025.12.1)  2 DEC 2025 03:51
+This is XeTeX, Version 3.141592653-2.6-0.999997 (MiKTeX 25.4) (preloaded format=xelatex 2025.12.1)  4 DEC 2025 22:34
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1070,78 +1070,92 @@ LaTeX Font Warning: Font shape `TU/ptm/m/it' undefined
 
 
 LaTeX Font Warning: Font shape `TU/ptm/b/sc' undefined
-(Font)              using `TU/ptm/b/n' instead on input line 91.
+(Font)              using `TU/ptm/b/n' instead on input line 88.
 
 LaTeX Font Info:    Font shape `TU/latinmodern-math.otf(1)/m/n' will be
-(Font)              scaled to size 7.0pt on input line 103.
+(Font)              scaled to size 7.0pt on input line 132.
 LaTeX Font Info:    Font shape `TU/latinmodern-math.otf(1)/m/n' will be
-(Font)              scaled to size 5.0pt on input line 103.
+(Font)              scaled to size 5.0pt on input line 132.
 LaTeX Font Info:    Trying to load font information for OML+lmm on input line 1
-03.
+32.
 (C:\Users\antho\AppData\Local\Programs\MiKTeX\tex/latex/lm\omllmm.fd
 File: omllmm.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    Font shape `TU/latinmodern-math.otf(2)/m/n' will be
-(Font)              scaled to size 10.00092pt on input line 103.
+(Font)              scaled to size 10.00092pt on input line 132.
 LaTeX Font Info:    Font shape `TU/latinmodern-math.otf(2)/m/n' will be
-(Font)              scaled to size 7.00064pt on input line 103.
+(Font)              scaled to size 7.00064pt on input line 132.
 LaTeX Font Info:    Font shape `TU/latinmodern-math.otf(2)/m/n' will be
-(Font)              scaled to size 5.00046pt on input line 103.
+(Font)              scaled to size 5.00046pt on input line 132.
 LaTeX Font Info:    Font shape `TU/latinmodern-math.otf(3)/m/n' will be
-(Font)              scaled to size 9.99893pt on input line 103.
+(Font)              scaled to size 9.99893pt on input line 132.
 LaTeX Font Info:    Font shape `TU/latinmodern-math.otf(3)/m/n' will be
-(Font)              scaled to size 6.99925pt on input line 103.
+(Font)              scaled to size 6.99925pt on input line 132.
 LaTeX Font Info:    Font shape `TU/latinmodern-math.otf(3)/m/n' will be
-(Font)              scaled to size 4.99947pt on input line 103.
-LaTeX Font Info:    Trying to load font information for U+msa on input line 103
+(Font)              scaled to size 4.99947pt on input line 132.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 132
 .
 (C:\Users\antho\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 ) (C:\Users\antho\AppData\Local\Programs\MiKTeX\tex/latex/microtype\mt-msa.cfg
 File: mt-msa.cfg 2006/02/04 v1.1 microtype config. file: AMS symbols (a) (RS)
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 103
+LaTeX Font Info:    Trying to load font information for U+msb on input line 132
 .
 (C:\Users\antho\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 ) (C:\Users\antho\AppData\Local\Programs\MiKTeX\tex/latex/microtype\mt-msb.cfg
 File: mt-msb.cfg 2005/06/01 v1.0 microtype config. file: AMS symbols (b) (RS)
-)
-LaTeX Font Info:    Font shape `TU/TimesNewRoman(1)/m/n' will be
-(Font)              scaled to size 10.0pt on input line 115.
-LaTeX Font Info:    Font shape `TU/TimesNewRoman(1)/m/n' will be
-(Font)              scaled to size 7.0pt on input line 115.
-LaTeX Font Info:    Font shape `TU/TimesNewRoman(1)/m/n' will be
-(Font)              scaled to size 5.0pt on input line 115.
-[1
+) [1
 
-] [2]
-Underfull \hbox (badness 5105) in paragraph at lines 195--196
+]
+LaTeX Font Info:    Font shape `TU/TimesNewRoman(1)/m/n' will be
+(Font)              scaled to size 10.0pt on input line 144.
+LaTeX Font Info:    Font shape `TU/TimesNewRoman(1)/m/n' will be
+(Font)              scaled to size 7.0pt on input line 144.
+LaTeX Font Info:    Font shape `TU/TimesNewRoman(1)/m/n' will be
+(Font)              scaled to size 5.0pt on input line 144.
+[2]
+LaTeX Font Info:    Trying to load font information for TU+pcr on input line 21
+1.
+LaTeX Font Info:    No file TUpcr.fd. on input line 211.
+
+LaTeX Font Warning: Font shape `TU/pcr/m/n' undefined
+(Font)              using `TU/lmr/m/n' instead on input line 211.
+
+
+(C:\Users\antho\AppData\Local\Programs\MiKTeX\tex/latex/microtype\mt-LatinModer
+nRoman.cfg
+File: mt-LatinModernRoman.cfg 2021/02/21 v1.1 microtype config. file: Latin Mod
+ern Roman (RS)
+)
+Underfull \hbox (badness 5105) in paragraph at lines 224--225
 []\TU/ptm/m/it/10 Modo Exploración (Jugadas iniciales,
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 196--197
+Underfull \hbox (badness 10000) in paragraph at lines 225--226
 []\TU/ptm/m/it/10 Modo Explotación (Juego avanzado,
  []
 
-
-Underfull \hbox (badness 10000) in paragraph at lines 207--208
+[3]
+Underfull \hbox (badness 10000) in paragraph at lines 236--237
 \TU/ptm/m/it/10 Se utilizan las funciones df.game.data y
  []
 
-[3]
-Underfull \hbox (badness 10000) in paragraph at lines 215--216
+
+Underfull \hbox (badness 10000) in paragraph at lines 242--243
 []\TU/ptm/m/it/10 Tiempo de Movimiento Medio
  []
 
+[4] [5]
 
 Package caption Warning: Unused \captionsetup[figure] on input line 55.
 See the caption package documentation for explanation.
 
 
 
-[4] (Documentacion.aux)
+[6] (Documentacion.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-04-14>
@@ -1151,12 +1165,12 @@ LaTeX Font Warning: Some font shapes were not available, defaults substituted.
 
  ) 
 Here is how much of TeX's memory you used:
- 20125 strings out of 405057
- 365418 string characters out of 5499578
- 943988 words of memory out of 5000000
- 46545 multiletter control sequences out of 15000+600000
+ 20161 strings out of 405057
+ 366334 string characters out of 5499578
+ 944988 words of memory out of 5000000
+ 46578 multiletter control sequences out of 15000+600000
  630450 words of font info for 83 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
- 90i,6n,116p,1012b,591s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 90i,6n,116p,1012b,558s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on Documentacion.pdf (4 pages).
+Output written on Documentacion.pdf (6 pages).

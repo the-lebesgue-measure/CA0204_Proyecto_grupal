@@ -41,10 +41,39 @@ Email: \textit{anflores@ucr.ac.cr}\\
 
 \begin{multicols}{2}
 
-\textbf{Abstracto}
-
-
 \section*{I. Introduccion.}
+
+El presente proyecto fue desarrollado con el objetivo de explorar los conceptos
+relacionados a las redes neuronales y los algoritmos de autoaprendizaje mediante
+la creación de un bot capaz de jugar partidas de ajedrez de manera competente.
+La idea surgió debido a que los miembros del grupo ya tenían conocimiento previo 
+acerca de la complejidad del ajedrez y de lo avanzada que está el área de entrenamiento
+de bots para ese juego, además de que es bien sabido que este juego relaciona
+conceptos clave de la carrera de Ciencias Actuariales como lo son la estadística y 
+la probabilidad de una manera que le resultaba interesante a los miembros del 
+grupo. Adicionalmente, se consideró que el ir explorando el funcionamiento de las redes
+neuronales desde hoy en día es importante, pues según Awati (2025), la habilidad de adaptación
+con la que cuenta esta tecnología permite ser de utilidad al momento de analizar
+la información disponible del mercado de valores, reconocer patrones, gestionar el control 
+de calidad de un proceso dado, hacer modelos financieros, combatir el fraude y buscar material 
+para investigaciones científicas, entre otros. Todo lo anterior se relaciona a áreas en las que 
+se desenvuelve un profesional en actuariado, y por ende es importante para el aprendizaje profesional 
+de los miembros del grupo.
+
+Una vez que se tuvo una idea inicial, se dio inicio a una investigación con el fin
+de entender de una mejor manera los conceptos asociados al ajedrez y redes neuronales,
+además de buscar paquetes de R que fueran de utilidad para la elaboración del proyecto,
+los cuales serán explicados a detalle en la sección de metodología y marco teórico 
+del presente proyecto. Sumado a lo anterior, se hizo uso de herramientas externas 
+como tarjetas gráficas con el fin de reducir el tiempo de entrenamiento del bot desarrollado
+y del motor de ajedrez Stockfish, este último orientado a probar las habilidades del bot.
+
+Finalmente, se decidió implementar una interfaz de tal manera que el usuario pueda interactuar
+de manera directa con el bot mediante la ejecución de una partida, pues de esta forma se 
+podía llegar a experimentar de primera mano el avance del proyecto, lo cual mejoraba el control
+de errores y proporcionaba un mayor dinamismo al trabajo en cuestión. Es por todo lo anterior que 
+se le invita al lector a visualizar las siguientes páginas del presente proyecto, pues representa
+el esfuerzo y dedicación de los autores. 
 
 \section{II. Metodología.}
 
@@ -102,97 +131,160 @@ La compilación del modelo utiliza el optimizador Adam con una tasa de aprendiza
 
 \subsection{2. Búsqueda de Árbol Monte Carlo (MCTS)}
 
-El MCTS es el algoritmo de decisión central, implementado en la función run.mcts y dependiente de la función best.move. Para el equipo, el MCTS es el corazón del agente; es el que toma la recomendación de la NN y la mastica 20 veces (o las que se le haya configurado en NUM.SIMULATIONS) para entregar la mejor jugada.
+El MCTS es el algoritmo de decisión central, implementado en la función run.mcts y dependiente de la función best.move. Para el agente, el MCTS es el componente principal que toma la recomendación de la NN y realiza 20 simulaciones (o las que se le haya configurado en NUM.SIMULATIONS) para entregar la mejor jugada.
 
 \subsubsection{2.1. Constantes de Control Global}
 
 Dos constantes globales controlan el equilibrio de la búsqueda:
 \begin{itemize}
-    \item $C.PUCT = 2.0$: El Coeficiente de Exploración. Este valor, definido globalmente, es super importante porque es la balanza que decide si se va a explorar caminos nuevos (porque la NN dice que son prometedores, alta $P$) o si se va a explotar caminos que ya se conocen y que han dado buen resultado (alto valor $Q$). Es el factor de riesgo, por así decirlo.
-    \item $NUM.SIMULATIONS = 20$: Número de simulaciones realizadas por MCTS por cada movimiento. Esto es un tira y encoge entre lo profundo que se desea pensar y el tiempo disponible para mover. Con $20$ simulaciones, se le da una revisada decente a las opciones sin eternizarse.
+    \item $C.PUCT = 2.0$: El Coeficiente de Exploración. Este valor, definido globalmente, equilibra la exploración de caminos nuevos (debido a una alta probabilidad $P$ de la NN) y la explotación de caminos ya conocidos que han dado buen resultado (alto valor $Q$).
+    \item $NUM.SIMULATIONS = 20$: Número de simulaciones realizadas por MCTS por cada movimiento, gestionando la profundidad del pensamiento en relación con el tiempo disponible.
 \end{itemize}
 
-El árbol de búsqueda se almacena en el entorno global mcts.tree, actuando como una hash map para acceder rápidamente a las estadísticas de nodo ($N, W, P$) a través de la clave FEN. Esto es como tener un cuaderno de apuntes global donde se guarda cuánto se visita un estado ($N$), cuánto se gana desde ahí ($W$), y la probabilidad inicial ($P$) que le dio la red.
+El árbol de búsqueda se almacena en el entorno global mcts.tree, actuando como una hash map para acceder rápidamente a las estadísticas de nodo ($N, W, P$) a través de la clave FEN. Esto permite un acceso rápido a cuánto se visita un estado ($N$), cuánto se gana desde ahí ($W$), y la probabilidad inicial ($P$) que le dio la red.
 
 \subsubsection{2.2. Fases de MCTS y Mecanismos de Robustez}
 
-La función run.mcts encapsula las cuatro fases de la simulación, y es donde se hace el trabajo pesado del análisis.
+La función run.mcts encapsula las cuatro fases de la simulación.
 
 \paragraph{2.2.1. Selección con PUCT:}
-La selección se guía por la función calculate.ucb, que usa la fórmula PUCT. Esta fórmula es la que guía el recorrido en el árbol:
+La selección se guía por la función calculate.ucb, que usa la fórmula PUCT. Esta fórmula dirige el recorrido en el árbol:
 $$
 \text{UCB} = Q + C_{PUCT} \cdot P \cdot \frac{\sqrt{N_{\text{sum}}}}{1 + N_{\text{current}}}
 $$
-El valor $Q$ es lo que se ha visto que funciona (la parte de Explotación), mientras que el segundo término, donde entra $C_{PUCT}$ y $P$, es la parte de Exploración. Se elige siempre el movimiento que dé el UCB más alto. El valor $Q$ es calculado como el ratio de valor/visitas ($W/N$) del nodo actual.
+El valor $Q$ representa la parte de Explotación, mientras que el segundo término, donde intervienen $C_{PUCT}$ y $P$, es la parte de Exploración. Se elige siempre el movimiento que dé el UCB más alto. El valor $Q$ es calculado como el ratio de valor/visitas ($W/N$) del nodo actual.
 
 \paragraph{2.2.2. Expansión y Parche de Asignación Segura:}
-Si se llega a un nodo nuevo, uno que no se ha visitado (o sea, $\sum N = 0$), se hace la Expansión. Se obtiene la predicción de la NN para ese nuevo estado. Aquí, es vital el Parche de Asignación Segura que se le configuró, porque la red a veces se vuelve loca o tiene un recorte de política que suma poco:
+Si se llega a un nodo nuevo, uno que no se ha visitado (es decir, $\sum N = 0$), se procede a la Expansión. Se obtiene la predicción de la NN para ese nuevo estado. En este punto, es vital el Parche de Asignación Segura configurado, ya que la red puede producir una política con una suma de probabilidades insignificante:
 \begin{enumerate}
     \item Se recorta la política $P_{\text{model}}$ solo a los movimientos legales.
-    \item Se verifica que la suma de esas probabilidades no sea insignificante (o sea, mayor que $\text{safety.threshold}$, que es $1e-4$).
-    \item Si es buena la suma, se Normaliza ($P \leftarrow P / \sum P$).
-    \item Si la suma es muy baja, no se confía en la red en este punto, y es mejor asignar una Política UNIFORME ($P \leftarrow 1/\text{num\_moves}$) a todos los movimientos. Esto, aunque parezca simple, es lo que evita que el algoritmo se quede pegado y garantiza que siga explorando robustamente.
+    \item Se verifica que la suma de esas probabilidades no sea insignificante (es decir, mayor que $\text{safety.threshold}$, que es $1e-4$).
+    \item Si la suma es adecuada, se Normaliza ($P \leftarrow P / \sum P$).
+      \item Si la suma es muy baja, se asigna una Política UNIFORME ($P \leftarrow 1/\text{num\_moves}$) a todos los movimientos, lo que garantiza que el algoritmo siga explorando robustamente.
 \end{enumerate}
 
 \paragraph{2.2.3. Retropropagación y Anulación de Recompensa:}
-Una vez que se llega al final de la simulación (ya sea por fin de partida o por la predicción de la NN en un nodo expandido), toca actualizar. La Retropropagación actualiza las estadísticas de visita y valor. El valor de recompensa ($Z$) se va pasando hacia atrás. Ojo: para el jugador anterior, el valor se invierte ($Z \leftarrow -Z$) porque lo que es bueno para un jugador es malo para su oponente, y viceversa. Esta inversión se hace en cada paso del bucle (for (node.data in rev(path))).
+Una vez que se llega al final de la simulación, la Retropropagación actualiza las estadísticas de visita y valor. El valor de recompensa ($Z$) se propaga hacia atrás. Para el jugador anterior, el valor se invierte ($Z \leftarrow -Z$) en cada paso (\texttt{for (node.data in rev(path))}).
 \begin{itemize}
-    \item Penalización de Empates: Se le puso un castigo sutil a los empates para que el agente no juegue tan aburrido. Si se llega a un empate por tablas (is\_stalemate, is\_seventyfive\_moves, o is\_fivefold\_repetition), el valor se anula a $Z = -0.5$ en lugar de $0$. Es una pequeña penalización para que prefiera la victoria.
+    \item Penalización de Empates: Para desalentar un juego pasivo, si se llega a un empate por tablas (is\_stalemate, is\_seventyfive\_moves, o is\_fivefold\_repetition), el valor se anula a $Z = -0.5$ en lugar de $0$. Esta pequeña penalización promueve la preferencia por la victoria.
 \end{itemize}
 
 \subsubsection{2.3. Estrategia de Auto-Juego y Control de Muestreo - Función best.move}
 
-Esta función es la que toma el resultado del MCTS . También es crucial para el Self-Play (auto-entrenamiento).
+Esta función toma el resultado del MCTS y es crucial para el Self-Play (auto-entrenamiento).
 
 \begin{itemize}
-    \item Ruido de Dirichlet: Si la partida está en las primeras 30 jugadas ($\text{move.count} < 30$), se le inyecta Ruido de Dirichlet a la política en la raíz. Esto es como darle un empujón para que pruebe jugadas que la NN no ve como las mejores, promoviendo una exploración más amplia al inicio.
-    \item Temperatura de Muestreo (high.temp): Esta es la famosa "temperatura" que controla la exploración vs. explotación a lo largo del juego:
+    \item Ruido de Dirichlet: Si la partida está en las primeras 30 jugadas ($\text{move.count} < 30$), se inyecta Ruido de Dirichlet a la política en la raíz. Esto promueve una exploración más amplia al inicio de la partida.
+    \item Temperatura de Muestreo (high.temp): Controla la exploración vs. explotación a lo largo del juego:
     \begin{enumerate}
-        \item Modo Exploración (Jugadas iniciales, $\text{move.count} < 40$): Se usa Temperatura $T=1.0$. Aquí, el movimiento no es solo el más visitado, sino que se elige aleatoriamente (sample) basado en las probabilidades de visita ($P_{\text{MCTS}}$). Así se asegura que se exploren buenas jugadas que no son necesariamente la mejor en ese momento.
-        \item Modo Explotación (Juego avanzado, $\text{move.count} \geq 40$): Simplemente se toma la jugada con el máximo número de visitas. Es la hora de jugar a ganar.
-    \end{enumerate}
-    \item Controles de Seguridad: La robustez es clave. Si por alguna razón los valores de $P_{\text{MCTS}}$ salen raros (NA, $0$, o si el which.max falla), el bot no se rompe; simplemente elige un movimiento completamente aleatorio (sample(moves.list, size = 1)).
+        \item Modo Exploración (Jugadas iniciales, $\text{move.count} < 40$): Se usa Temperatura $T=1.0$. El movimiento se elige aleatoriamente (sample) basado en las probabilidades de visita ($P_{\text{MCTS}}$), asegurando la exploración de jugadas prometedoras.
+          \item Modo Explotación (Juego avanzado, $\text{move.count} \geq 40$): Simplemente se toma la jugada con el máximo número de visitas.
+  \end{enumerate}
+  \item Controles de Seguridad: Si los valores de $P_{\text{MCTS}}$ son anómalos (NA, $0$, o si el which.max falla), el bot elige un movimiento completamente aleatorio (sample(moves.list, size = 1)).
 \end{itemize}
 
 \subsection{3. Generación, Almacenamiento y Evaluación de Datos}
 
-El sistema de datos (datos\_ajedrez.R) y las librerías (chess, processx) garantizan la experiencia de juego persistente y analizable. Este módulo es nuestra "memoria" y es vital para que el agente Hatchet1 pueda aprender a largo plazo, ya que aquí se guarda toda la experiencia de auto-juego para el próximo ciclo de entrenamiento.
+El sistema de datos (datos\_ajedrez.R) y las librerías (chess, processx) garantizan la experiencia de juego persistente y analizable. Este módulo es vital para el aprendizaje a largo plazo de Hatchet1.
 
 \subsubsection{3.1. Estructuras de Datos y Persistencia}
 
-Se utilizan las funciones df.game.data y df.heavy.game.data para registrar los datos. La primera se encarga de guardar lo esencial de la partida, mientras que la segunda, df.heavy.game.data, es la que almacena la información vital y más pesada.
-
-La función data.to.txt se encarga de que la data no se pierda. Guarda los archivos de juego en un directorio específico de almacenamiento con el argumento append = TRUE. Esto es clave, porque cada partida nueva se agrega al final del archivo existente, asegurando el crecimiento continuo del conjunto de entrenamiento sin sobrescribir nada.
+Se utilizan las funciones df.game.data y df.heavy.game.data para registrar los datos. La función data.to.txt se encarga de la persistencia, guardando los archivos de juego en un directorio específico de almacenamiento con el argumento append = TRUE, asegurando el crecimiento continuo del conjunto de entrenamiento sin sobrescribir.
 
 \begin{itemize}
-    \item Datos Pesados (games.heavy.data): Aquí registramos información crítica. Por ejemplo:
+  \item Datos Pesados (games.heavy.data): Aquí se registra información crítica. Por ejemplo:
     \begin{itemize}
-        \item Historial FEN (Tabla\_totales): ¡Esto es oro! Es la secuencia de todas las posiciones de la partida, crucial para recrear y entrenar a la NN.
-        \item Tiempo de Movimiento Medio (Tiempo\_movimiento\_medio): No solo jugamos bien, sino que controlamos cuánto nos cuesta. Este tiempo se calcula usando la mediana de los tiempos de CPU dedicados al MCTS en cada jugada, dándonos una idea real de la carga computacional.
+        \item Historial FEN (Tabla\_totales): Secuencia de todas las posiciones de la partida, crucial para recrear y entrenar a la NN.
+        \item Tiempo de Movimiento Medio (Tiempo\_movimiento\_medio): Se calcula usando la mediana de los tiempos de CPU dedicados al MCTS en cada jugada, indicando la carga computacional.
     \end{itemize}
     \item Además, el ELO del agente y el color con el que jugó se registran también en esta estructura.
 \end{itemize}
 
 \subsubsection{3.2. Medición del Rendimiento}
 
-El rendimiento se cuantifica mediante el sistema ELO, calculado por la función elo.function. Este es nuestro termómetro de fuerza. El agente se evalúa frente a un oponente base con un ELO de $400$.
+El rendimiento se cuantifica mediante el sistema ELO, calculado por la función elo.function. El agente se evalúa frente a un oponente base con un ELO de $400$.
 
-Para la actualización del ELO, se usa la fórmula tradicional, pero con un factor de peso $K=20$ (nuestra constante de ajuste, que tan rápido queremos que cambie nuestro ELO con cada resultado).
+Para la actualización del ELO, se usa la fórmula tradicional, pero con un factor de peso $K=20$ (la constante de ajuste).
 
 $$
 R'_{\text{Hatchet1}} = R_{\text{Hatchet1}} + 20 \cdot (\text{Score} - E_{\text{Esperada}})
 $$
-Aquí, $R'_{\text{Hatchet1}}$ es el nuevo ELO, $R_{\text{Hatchet1}}$ es el ELO actual, Score es el resultado real (que puede ser $1$ por victoria, $0.5$ por empate, o $0$ por derrota), y $E_{\text{Esperada}}$ es la probabilidad de victoria esperada contra el oponente (que sale de una fórmula basada en la diferencia de ELO). La lógica del cálculo se asegura de que estos resultados se utilicen correctamente en la fórmula, dándonos un feedback numérico preciso sobre qué tan bien está jugando Hatchet1.
-
-
+Aquí, $R'_{\text{Hatchet1}}$ es el nuevo ELO, $R_{\text{Hatchet1}}$ es el ELO actual, Score es el resultado real (que puede ser $1$ por victoria, $0.5$ por empate, o $0$ por derrota), y $E_{\text{Esperada}}$ es la probabilidad de victoria esperada contra el oponente (que sale de una fórmula basada en la diferencia de ELO). La lógica del cálculo asegura que estos resultados se utilicen correctamente en la fórmula.
 \section*{III. Resultados}
 
-\section*{IV. Discusión}
+Durante la fase de pruebas, el modelo Hatchet1 fue evaluado en el modo \texttt{bot\_vs\_bot\_interno}, donde la inteligencia artificial jugó exclusivamente contra sí misma. En todas las ejecuciones las partidas finalizaron de forma correcta y se registraron únicamente tablas: no hubo victorias ni derrotas para ninguno de los bandos, solo empates por repetición de jugadas ( lo más común), por ahogado o por la regla de las 50 jugadas. Este comportamiento confirma que el sistema es capaz de generar movimientos legales de manera sostenida y completar partidas válidas sin provocar errores del motor de ajedrez ni fallos de ejecución.
 
-\section*{V. Conclusiones}
+El número de jugadas por partida se concentró aproximadamente entre 65 y 90 movimientos, por lo que no se observaron ni partidas extremadamente cortas ni encuentros excesivamente largos. En términos prácticos, esto indica que Hatchet1 logra sostener una partida completa sin colapsar en pocas jugadas, pero tampoco entra en ciclos indefinidos que alarguen artificialmente la duración del juego. A nivel computacional, el tiempo promedio por movimiento se mantuvo alrededor de 4–5 segundos, lo cual se considera eficiente para el entorno experimental utilizado, dado que permite un juego fluido sin incurrir en tiempos de respuesta excesivos.
 
+Sin embargo, es importante resaltar que no se realizó un análisis sistemático de las posiciones intermedias de las partidas. No se midieron métricas tácticas ni posicionales (como ventaja material, evaluación de motor externo o precisión por jugada), por lo que no es posible afirmar que las posiciones hayan sido equilibradas desde un punto de vista ajedrecístico, este análisis se puede hacer a nivel externo, donde lo que demuestra es que inicia bien, con jugadas de libro pero después entra muy rápido en posiciones muy estratégicas donde hay muchas piezas confrontándose. Lo único que puede concluirse con certeza es que el modelo evitó caer en derrotas rápidas y que las partidas concluyeron por mecanismos de tablas, y no por jaque mate directo.
+
+En cuanto al estilo de juego, el comportamiento del bot fue bastante aleatorio, algo que era de esperar en la etapa actual del proyecto. La red neuronal utilizada corresponde a una arquitectura profunda de tipo residual inspirada en AlphaZero, pero todavía se encuentra en una fase temprana de desarrollo: no ha recibido un volumen suficiente de autoentrenamiento ni de entrenamiento supervisado como para internalizar patrones estratégicos sólidos. En consecuencia, los movimientos generados se asemejan más a una exploración casi aleatoria del espacio de jugadas que a un juego estratégico coherente. Esta aleatoriedad explica por qué las partidas tienden a terminar en tablas: el modelo explora diversas continuaciones sin una planificación clara de largo plazo, pero al mismo tiempo no comete, de forma sistemática, errores triviales que conduzcan a derrotas inmediatas.
+
+Finalmente, aunque la arquitectura residual de Hatchet1 es teóricamente robusta y se basa en modelos consolidados en la literatura, la evidencia empírica disponible sigue siendo limitada por las pocas partidas que se jugaron. Solo se evaluó un modelo entrenado bajo un conjunto restringido de partidas insuficientes y sin un estudio de progresión del rendimiento a lo largo de múltiples ciclos de entrenamiento. Por ello, todavía no es posible afirmar que la arquitectura sea estratégicamente sólida ni que el bot posea un nivel competitivo alto; los resultados obtenidos muestran más bien que el sistema es estable, funcional y eficiente en tiempo de cómputo, pero aún lejos de comportarse como un motor de ajedrez fuerte frente a oponentes avanzados.
+
+
+
+% \section*{IV. Discusión}
+
+
+\section*{IV. Conclusiones}
+
+La primera conclusión a la que se llegó durante el desarrollo del presente proyecto 
+fue que todavía hace falta una gran cantidad de aprendizaje para lograr usar de 
+manera correcta el concepto de redes neuronales. Una de las mayores dificultades 
+se dio en que, cada vez que se quería hacer un avance había que estudiar una 
+serie de conceptos, los cuales a su vez tenían raíces en otros temas aparte. 
+En síntesis, este tema es sumamente amplio, y en el transcurso de un semestre 
+resulta sumamente difícil aprender a manejar la teoría detrás de las redes 
+neuronales.
+
+Luego, la segunda conclusión que se pudo generar fue que el lenguaje de programación
+R es sumamente ineficiente al momento de manejar árboles de decisión, pues tan solo recorrer un árbol 
+completo tardaba 5 segundos en promedio. Lo anterior, sumado a que es necesario revisar una gran 
+cantidad de árboles por juego, extendió el proceso de entrenamiento en gran medida. Esto,
+sumado al equipo y presupuesto con el que los miembros del grupo contaban, complicó en gran medida el desarrollo del proyecto.
+Cabe aclarar que esto es así específicamente en R, pues durante la investigación se llegó a apreciar
+que otros lenguajes como Python son capaces de recorrer los mismos árboles con un poder computacional
+similar en menor tiempo.
+
+Partiendo de la conclusión anterior, fue que se determinó que no era posible cumplir con los objetivos 
+planteados al inicio del proyecto, más específicamente no se pudo determinar de manera
+certera la eficacia del bot entrenado. Esto se debió a que, para poder
+brindar un resultado concluyente, era necesario realizar alrededor de 100000 sesiones de entrenamiento, lo
+cual habría requerido de una inversión de tiempo y de energía significativa. 
+
+Sin embargo, e independientemente de lo mencionado en el párrafo anterior, la elaboración del 
+presente proyecto sirvió como una introducción a los conceptos más básicos del área de estudio
+de redes neuronales. Sumado a esto, y pese a que el proceso de entrenamiento no alcanzó el punto 
+deseado por los autores, sí se pudo comprobar el potencial de este tipo de entrenamiento, pues 
+el bot logró alcanzar correctamente el nivel de un jugador de ajedrez promedio pese a todas las limitaciones
+computacionales con las que los autores contaban.
+
+\subsection{1. Limitaciones}
+
+La mayor limitación que se llegó a enfrentar durante la elaboración del proyecto fue el tiempo con el que se contaba,
+pues esto limitó el proceso de aprendizaje de la teoría asociada a las redes neuronales, lo que 
+eventualmente provocó que el progreso se viera frenado. Relacionado a lo anterior surgió otra limitación, 
+la cual fue que, debido a la ineficiencia de R en el manejo de árboles de decisión y a los recursos con los que
+los miembros del grupo contaban, llegó a hacer falta una gran cantidad
+de tiempo y energía para concluir el entrenamiento del bot, lo cual no era viable para 
+efectos del proyecto.
+
+\subsection{2. Recomendaciones}
+
+A nivel técnico, los miembros del grupo recomiendan usar otros lenguajes de programación para
+la elaboración de un bot que deba cumplir con funciones similares a las buscadas en este proyecto, o para cualquier
+trabajo que tenga que usar árboles de decisión como herramienta principal para cumplir con su objetivo. De no ser posible lo anterior,
+se recomienda contar con un equipo computacional con una potencia considerable, pues en este tipo de trabajos es 
+necesario tener un procesador y una tarjeta gráfica lo suficientemente competentes. 
+
+A nivel práctico, se recomienda elaborar este tipo de proyectos en grupo pues es un trabajo sumamente pesado para una única 
+persona. Sin embargo, también se recomienda a los grupos que se esfuercen por contar con un buen nivel de comunicación y con 
+un nivel similar en el ámbito de programación, pues a lo largo del desarrollo de este proyecto se llegaron a dar inconvenientes 
+debido a la diferencia de conocimientos y errores al momento de comunicar ideas, lo cual fue especialmente problemático al momento
+de la división de tareas.
 \section*{Referencias}
 
-[1]
+[1] Awati, R. (27 de octubre del 2025). What is a neural network?.\url{https://www.techtarget.com/searchenterpriseai/definition/neural-network}
 
 \end{multicols}

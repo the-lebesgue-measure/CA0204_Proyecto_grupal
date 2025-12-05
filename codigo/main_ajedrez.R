@@ -21,7 +21,8 @@
 # Variables no primiticas
 # # Carga de modelo
 # model = generate.model() 
-# Si es nombre de funcion empieza con minuscula
+# Si es nombre de funcion empieza con minuscula51
+
 
 # Sources
 source("red_neuronal_ajedrez.R")

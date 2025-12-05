@@ -1,12 +1,11 @@
 % Options for packages loaded elsewhere
 \PassOptionsToPackage{unicode}{hyperref}
 \PassOptionsToPackage{hyphens}{url}
+%
 \documentclass[
   10pt,
 ]{article}
-\usepackage{xcolor}
 \usepackage{amsmath,amssymb}
-\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
 \usepackage{iftex}
 \ifPDFTeX
   \usepackage[T1]{fontenc}
@@ -20,7 +19,7 @@
 \usepackage{lmodern}
 \ifPDFTeX\else
   % xetex/luatex font selection
-  \setmainfont[]{Times New Roman}
+    \setmainfont[]{Times New Roman}
 \fi
 % Use upquote if available, for straight quotes in verbatim environments
 \IfFileExists{upquote.sty}{\usepackage{upquote}}{}
@@ -38,9 +37,11 @@
 }{% if KOMA class
   \KOMAoptions{parskip=half}}
 \makeatother
+\usepackage{xcolor}
 \setlength{\emergencystretch}{3em} % prevent overfull lines
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
 \usepackage[margin=1in, columnsep=0.2in]{geometry}
 \usepackage{times}
 \usepackage{amsmath,amssymb,amsfonts}
@@ -67,17 +68,17 @@
 
 \begin{center}
 {\huge
-\textbf{Implementación de MCTS y Redes Convolucionales para el desarrollo de una red nueronal en R}
+\textbf{Implementación de MCTS y Redes Convolucionales para el desarrollo de una red neuronal en R}
 }
 
 \vspace{0.5cm}
 \large
 
-Anthonny Flores,....\\
+Amy Chen, Anthonny Flores, Leonardo Vega, Andrés Zúñiga\\
 Escuela de Matemáticas\\
 Universidad de Costa Rica\\ 
 San José, Costa Rica\\
-Email: \textit{anflores@ucr.ac.cr}\\
+%Email: \textit{anflores@ucr.ac.cr}\\
 \end{center}
 
 \vspace{1cm}
@@ -85,7 +86,7 @@ Email: \textit{anflores@ucr.ac.cr}\\
 
 \begin{multicols}{2}
 
-\section*{I. Introduccion.}
+\section*{I. Introducción}
 
 El presente proyecto fue desarrollado con el objetivo de explorar los conceptos
 relacionados a las redes neuronales y los algoritmos de autoaprendizaje mediante
@@ -101,7 +102,7 @@ con la que cuenta esta tecnología permite ser de utilidad al momento de analiza
 la información disponible del mercado de valores, reconocer patrones, gestionar el control 
 de calidad de un proceso dado, hacer modelos financieros, combatir el fraude y buscar material 
 para investigaciones científicas, entre otros. Todo lo anterior se relaciona a áreas en las que 
-se desenvuelve un profesional en actuariado, y por ende es importante para el aprendizaje profesional 
+se desenvuelve un profesional en actuariado, y, por ende, es importante para el aprendizaje profesional 
 de los miembros del grupo.
 
 Una vez que se tuvo una idea inicial, se dio inicio a una investigación con el fin
@@ -119,7 +120,7 @@ de errores y proporcionaba un mayor dinamismo al trabajo en cuestión. Es por to
 se le invita al lector a visualizar las siguientes páginas del presente proyecto, pues representa
 el esfuerzo y dedicación de los autores. 
 
-\section{II. Metodología.}
+\section{II. Metodología}
 
 Para el bot de ajedrez Hatchet1, el equipo se basó en el Aprendizaje por Refuerzo Profundo (Deep Reinforcement Learning), el cual toma inspiración del modelo AlphaZero para lograr un autoentrenamiento continuo (Self-Play). Este enfoque reemplaza el conocimiento heurístico humano programado con una Red Neuronal Profunda (NN) que se mejora iterativamente, guiando un potente algoritmo de Búsqueda de Árbol Monte Carlo (MCTS).
 
@@ -269,9 +270,22 @@ Finalmente, aunque la arquitectura residual de Hatchet1 es teóricamente robusta
 
 
 % \section*{IV. Discusión}
+\section*{IV. Discusión}
+
+Los resultados obtenidos permiten matizar el cumplimiento de los objetivos planteados al inicio del proyecto. Por un lado, el sistema desarrollado logró integrar de forma funcional los componentes clave de un agente de ajedrez inspirado en AlphaZero: codificación del estado en tensores, red neuronal residual profunda, algoritmo MCTS y un módulo de generación y registro de datos. El hecho de que todas las partidas en modo \texttt{bot\_vs\_bot\_interno} concluyeran de forma correcta, sin errores de ejecución y mediante mecanismos reglamentarios (tablas por repetición, ahogado o regla de las 50 jugadas), evidencia que la arquitectura propuesta es coherente a nivel técnico y que la interacción entre R, \texttt{keras3} y el paquete \texttt{chess} es estable.
+
+Sin embargo, cuando se analiza la calidad ajedrecística del juego, los resultados son más modestos. El patrón de partidas largas que terminan en tablas, junto con la ausencia de victorias o derrotas claras, sugiere que Hatchet1 se comporta como un agente que explora de manera amplia el espacio de jugadas legales, pero sin una planificación estratégica sólida. La red neuronal residual diseñada (20 bloques y 256 filtros) tiene capacidad teórica suficiente para capturar patrones de alto nivel, pero el volumen de autoentrenamiento disponible fue limitado y no se complementó con entrenamiento supervisado sobre partidas humanas o de motores consolidados. En este contexto, la combinación de una política todavía poco informativa con un MCTS de sólo 20 simulaciones por movimiento hace que el árbol de búsqueda no explote en profundidad las posiciones, lo que se traduce en un estilo de juego que se percibe cercano a la aleatoriedad controlada.
+
+Este comportamiento también se explica por ciertas decisiones de diseño del MCTS. La inyección de ruido de Dirichlet en las primeras jugadas y el uso de temperatura alta en la fase inicial de la partida son mecanismos habituales para favorecer la exploración en esquemas de autoaprendizaje. No obstante, cuando el modelo subyacente no ha alcanzado un nivel de entrenamiento suficiente, estos mecanismos terminan amplificando la variabilidad de las jugadas sin que exista una “dirección estratégica” clara que oriente la exploración. De forma similar, la penalización suave de las tablas (recompensa $Z=-0.5$) busca desincentivar el juego pasivo, pero con pocas iteraciones de entrenamiento su efecto no alcanza a reflejarse en un cambio de estilo: el agente evita colapsos tácticos inmediatos, pero no desarrolla secuencias de jugadas que materialicen ventajas en victorias.
+
+Otro aspecto relevante de los resultados es que la evaluación se limitó prácticamente al comportamiento en auto-juego. No se llevó a cabo un análisis sistemático de las posiciones intermedias utilizando un motor externo ni se midieron métricas como ventaja material promedio, precisión por jugada o tasa de errores graves. Tampoco se construyó una curva de progreso del ELO del agente a lo largo de múltiples ciclos de entrenamiento. En consecuencia, las conclusiones que pueden extraerse sobre la “fuerza real” de Hatchet1 son necesariamente cautelosas: se puede afirmar que el sistema es estable, que genera partidas legalmente correctas y que evita derrotas rápidas, pero no que posea aún un nivel competitivo frente a oponentes humanos fuertes o motores consolidados.
+
+Desde el punto de vista computacional, los resultados ponen en evidencia una tensión entre la ambición del modelo y las restricciones de la plataforma utilizada. La arquitectura residual profunda y el uso de MCTS exigen grandes volúmenes de partidas y una capacidad de cómputo considerable. En este proyecto, la implementación en R demostró ser especialmente costosa para el manejo intensivo de árboles de decisión: tiempos del orden de varios segundos por jugada y la necesidad de revisar numerosos nodos por partida limitaron de forma práctica el número de episodios de entrenamiento posibles. Esto generó una brecha entre el diseño teórico del agente (cercano a esquemas de última generación) y lo que efectivamente se pudo entrenar y evaluar en un semestre con recursos restringidos.
+
+Finalmente, a nivel formativo, la experiencia puede interpretarse como una introducción valiosa más que como la construcción de un motor de alto rendimiento. El proyecto permitió a los autores familiarizarse con conceptos fundamentales del Aprendizaje por Refuerzo Profundo aplicados al ajedrez —codificación de estados, separación política/valor, combinación de pérdidas, búsqueda guiada por políticas, persistencia de datos y cálculo de ELO—, al tiempo que visibilizó las limitaciones de R para este tipo de aplicaciones y la importancia de alinear los objetivos de desempeño con los recursos disponibles. En este sentido, aunque el bot no alcanzó un nivel competitivo elevado, sí evidenció el potencial de la arquitectura y dejó una base técnica y conceptual sobre la cual podrían desarrollarse, en trabajos futuros, modelos mejor entrenados, migraciones a lenguajes más eficientes y esquemas de evaluación más rigurosos frente a oponentes externos y métricas estandarizadas.
 
 
-\section*{IV. Conclusiones}
+\section*{V. Conclusiones}
 
 La primera conclusión a la que se llegó durante el desarrollo del presente proyecto 
 fue que todavía hace falta una gran cantidad de aprendizaje para lograr usar de 
@@ -329,8 +343,40 @@ debido a la diferencia de conocimientos y errores al momento de comunicar ideas,
 de la división de tareas.
 \section*{Referencias}
 
-[1] Awati, R. (27 de octubre del 2025). What is a neural network?.\url{https://www.techtarget.com/searchenterpriseai/definition/neural-network}
+[1] Awati, R. (27 de octubre del 2025). \textit{What is a neural network?}. 
+\url{https://www.techtarget.com/searchenterpriseai/definition/neural-network}
+
+[2] Klein, D. (2022). \textit{Neural networks for chess: The magic of deep and reinforcement learning revealed}. 
+arXiv. \url{https://arxiv.org/abs/2209.01506}
+
+[3] Aggarwal, C. C. (2018). \textit{Neural networks and deep learning: A textbook}. Springer.
+
+[4] Bishop, C. M. (2006). \textit{Pattern recognition and machine learning}. Springer Science+Business Media.
+
+[5] Goodfellow, I., Bengio, Y., \& Courville, A. (2016). \textit{Deep learning}. MIT Press.
+
+[6] Silver, D., Hubert, T., Schrittwieser, J., Antonoglou, I., Lai, M., Guez, A., Lanctot, M., Sifre, L., 
+Kumaran, D., Graepel, T., Lillicrap, T., Simonyan, K., \& Hassabis, D. (2018). 
+A general reinforcement learning algorithm that masters chess, shogi, and Go through self-play. 
+\textit{Science}, 362(6419), 1140–1144. \url{https://doi.org/10.1126/science.aar6404}
+
+[7] Alam, S. (2023). An investigation of the imputation techniques for missing data. \textit{ScienceDirect}. 
+Recuperado de \url{https://www.sciencedirect.com/science/article/pii/S2772662223001819}
+
+[8] DeLeo, M., \& Guven, E. (s.f.). \textit{Learning chess with language models and transformers}. 
+Whiting School of Engineering, Johns Hopkins University.
+
+[9] R Core Team. (s.f.). \textit{CRAN: Manuals – The Comprehensive R Archive Network}. 
+Recuperado de \url{https://cran.r-project.org/manuals.html}
+
+[10] Chang, M., \& Liang, T. (2018). \textit{Recreating AlphaZero Chess Engine}. 
+Reporte de proyecto del curso CS230: Deep Learning, Stanford University.
+
+[11] Pomares C., M. (s.f.). \textit{Entropy and Economics}. Preprint. 
+Recuperado de \url{https://arxiv.org/abs/2407.00022}
 
 \end{multicols}
+
+\textbackslash end\{document\}
 
 \end{document}
